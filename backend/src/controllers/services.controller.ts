@@ -2,17 +2,32 @@ import mongoose from "mongoose";
 import { Request, Response } from "express";
 import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
+import createRedisClient from "../lib/redis";
 
-const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const getAllServices = async (req: Request, res: Response) => {
   try {
+    const redisClient = await createRedisClient();
+
+    // check cache first
+    const cacheKey = `services:${JSON.stringify(req.query)}`;
+    const cachedData = await redisClient.get(cacheKey);
+
+    // if cache hit, return cached data
+    if (cachedData) {
+      console.log("Cache hit for services");
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
     const page = Math.max(Number(req.query.page) || 1, 1);
     const limit = Math.max(Number(req.query.limit) || 20, 1);
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = {};
-    const categoryParam = typeof req.query.category === "string" ? req.query.category.trim() : "";
+    const categoryParam =
+      typeof req.query.category === "string" ? req.query.category.trim() : "";
 
     if (categoryParam) {
       if (mongoose.Types.ObjectId.isValid(categoryParam)) {
@@ -39,6 +54,19 @@ export const getAllServices = async (req: Request, res: Response) => {
 
     const hasMore = page * limit < total;
 
+    // cache the result for 10 minutes
+    await redisClient.setEx(
+      cacheKey,
+      600,
+      JSON.stringify({
+        services,
+        total,
+        hasMore,
+        page,
+        limit,
+      }),
+    );
+
     res.status(200).json({
       services,
       total,
@@ -47,6 +75,7 @@ export const getAllServices = async (req: Request, res: Response) => {
       limit,
       message: "Services retrieved successfully",
     });
+    
   } catch (error) {
     console.error("Get all services error:", error);
     res.status(500).json({ message: "Internal server error" });
