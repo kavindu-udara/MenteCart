@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
 
+export interface IServiceCategory {
+    name: string;
+    description: string;
+}
+
 const serviceCategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true },
