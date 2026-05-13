@@ -1,13 +1,10 @@
 import mongoose from "mongoose";
-import { cartItemSchema } from "./cartItem.model";
+import { cartItemSchema, ICartItem } from "./cartItem.model";
 
-export interface ICartItem {
-    serviceId: mongoose.Types.ObjectId;
-    selectedDate: Date;
-    timeSlotStart: string;
-    timeSlotEnd: string;
-    quantity: number;
-    priceAtAdd: number;
+export interface ICart {
+    userId: mongoose.Types.ObjectId;
+    items: ICartItem[];
+    totalAmount: number;
 }
 
 const cartSchema = new mongoose.Schema({
