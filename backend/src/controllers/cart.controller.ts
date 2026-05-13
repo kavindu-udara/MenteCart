@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import createRedisClient from "../lib/redis";
 import CartItem from "../models/cartItem.model";
 import { IService } from "../models/service.model";
+import { addToCartSchema } from "../lib/zodSchemas";
 
 const redisClient = await createRedisClient();
 
@@ -54,6 +55,40 @@ export const getUserCart = async (req : Request, res : Response) => {
 export const addItemToCart = async (req : Request, res : Response) => {
     try {
         // TODO: validate request body using zod
+        const userId = req.decoded.userId;
+
+        const result = addToCartSchema.safeParse(req.body);
+
+        if (!result.success) {
+            return res.status(400).json({
+                message: "Validation failed",
+                errors: result.error.flatten().fieldErrors,
+            });
+        }
+
+        const { serviceId, quantity } = result.data;
+
+        // check if item already exists in cart
+        let cartItem = await CartItem.findOne({ userId, serviceId });
+
+        if (cartItem) {
+            // if item exists, update quantity
+            cartItem.quantity += quantity;
+            await cartItem.save();
+        } else {
+            // if item does not exist, create new cart item
+            cartItem = new CartItem({ userId, serviceId, quantity });
+            await cartItem.save();
+        }
+
+        // invalidate cache for user cart
+        const cacheKey = `cart:${userId}`;
+        await redisClient.del(cacheKey);
+
+        res.status(200).json({
+            message: "Item added to cart successfully",
+            cartItem,
+        });
     } catch (error) {
         console.error("Add item to cart error:", error);
         res.status(500).json({ message: "Internal server error" });

@@ -8,6 +8,7 @@ import createRedisClient from './lib/redis';
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
 import cartRoutes from './routes/cart.route';
+import { errorMiddleware } from './middlewares/error.middleware';
 
 dotenv.config();
 await connectDB();
@@ -37,6 +38,8 @@ app.use('/api/cart', cartRoutes);
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
+
+app.use(errorMiddleware);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
