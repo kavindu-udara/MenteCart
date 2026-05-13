@@ -4,13 +4,13 @@ import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
 import createRedisClient from "../lib/redis";
 
-const escapeRegex = (value: string) =>
+const categoryRegex = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const redisClient = await createRedisClient();
 
 export const getAllServices = async (req: Request, res: Response) => {
   try {
-    const redisClient = await createRedisClient();
-
     // check cache first
     const cacheKey = `services:${JSON.stringify(req.query)}`;
     const cachedData = await redisClient.get(cacheKey);
@@ -34,7 +34,7 @@ export const getAllServices = async (req: Request, res: Response) => {
         filter.categoryId = categoryParam;
       } else {
         const category = await ServiceCategory.findOne({
-          name: new RegExp(`^${escapeRegex(categoryParam)}$`, "i"),
+          name: new RegExp(`^${categoryRegex(categoryParam)}$`, "i"),
         });
 
         if (!category) {
@@ -64,6 +64,7 @@ export const getAllServices = async (req: Request, res: Response) => {
         hasMore,
         page,
         limit,
+        message: "Services retrieved successfully",
       }),
     );
 
@@ -75,7 +76,6 @@ export const getAllServices = async (req: Request, res: Response) => {
       limit,
       message: "Services retrieved successfully",
     });
-    
   } catch (error) {
     console.error("Get all services error:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -84,6 +84,16 @@ export const getAllServices = async (req: Request, res: Response) => {
 
 export const getServiceById = async (req: Request, res: Response) => {
   try {
+    // check cache first
+    const cacheKey = `service:${JSON.stringify(req.query)}`;
+    const cachedData = await redisClient.get(cacheKey);
+
+    // if cache hit, return cached data
+    if (cachedData) {
+      console.log("Cache hit for service by id");
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
     const { id } = req.params;
 
     const service = await Service.findById(id).populate(
@@ -94,6 +104,13 @@ export const getServiceById = async (req: Request, res: Response) => {
     if (!service) {
       return res.status(404).json({ message: "Service not found" });
     }
+
+    // cache the result for 10 minutes
+    await redisClient.setEx(
+      cacheKey,
+      600,
+      JSON.stringify({ service, message: "Service retrieved successfully" }),
+    );
 
     res
       .status(200)
