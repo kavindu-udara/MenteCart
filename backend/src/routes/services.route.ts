@@ -1,8 +1,9 @@
 import express from "express";
+import { getAllServices, getServiceById } from "../controllers/services.controller";
 
 const router = express.Router();
 
-router.get('/');
-router.get('/:id');
+router.get('/', getAllServices);
+router.get('/:id', getServiceById);
 
 export default router;
