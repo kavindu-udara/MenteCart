@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import createRedisClient from "../lib/redis";
 import CartItem from "../models/cartItem.model";
+import { IService } from "../models/service.model";
 
 const redisClient = await createRedisClient();
 
@@ -18,7 +19,7 @@ export const getUserCart = async (req : Request, res : Response) => {
       return res.status(200).json(JSON.parse(cachedData));
     }
 
-    const cartItems = await CartItem.find({ userId }).populate(
+    const cartItems = await CartItem.find({ userId }).populate<{serviceId : IService}>(
       "serviceId",
       "name description price",
     );
