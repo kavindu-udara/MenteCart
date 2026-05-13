@@ -50,3 +50,12 @@ export const getUserCart = async (req : Request, res : Response) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const addItemToCart = async (req : Request, res : Response) => {
+    try {
+        // TODO: validate request body using zod
+    } catch (error) {
+        console.error("Add item to cart error:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
