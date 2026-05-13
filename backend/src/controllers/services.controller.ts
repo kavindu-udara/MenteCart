@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
 import createRedisClient from "../lib/redis";
@@ -9,7 +9,11 @@ const categoryRegex = (value: string) =>
 
 const redisClient = await createRedisClient();
 
-export const getAllServices = async (req: Request, res: Response) => {
+export const getAllServices = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     // check cache first
     const cacheKey = `services:${JSON.stringify(req.query)}`;
@@ -78,11 +82,15 @@ export const getAllServices = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Get all services error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };
 
-export const getServiceById = async (req: Request, res: Response) => {
+export const getServiceById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     // check cache first
     const cacheKey = `service:${JSON.stringify(req.query)}`;
@@ -117,6 +125,6 @@ export const getServiceById = async (req: Request, res: Response) => {
       .json({ service, message: "Service retrieved successfully" });
   } catch (error) {
     console.error("Get service by id error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };

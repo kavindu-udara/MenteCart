@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import createRedisClient from "../lib/redis";
 import CartItem from "../models/cartItem.model";
 import { IService } from "../models/service.model";
@@ -6,7 +6,7 @@ import { addToCartSchema } from "../lib/zodSchemas";
 
 const redisClient = await createRedisClient();
 
-export const getUserCart = async (req : Request, res : Response) => {
+export const getUserCart = async (req : Request, res : Response, next : NextFunction) => {
   try {
     const userId = req.decoded.userId;
 
@@ -48,11 +48,11 @@ export const getUserCart = async (req : Request, res : Response) => {
     });
   } catch (error) {
     console.error("Get user cart error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };
 
-export const addItemToCart = async (req : Request, res : Response) => {
+export const addItemToCart = async (req : Request, res : Response, next : NextFunction) => {
     try {
         // TODO: validate request body using zod
         const userId = req.decoded.userId;
@@ -91,6 +91,6 @@ export const addItemToCart = async (req : Request, res : Response) => {
         });
     } catch (error) {
         console.error("Add item to cart error:", error);
-        res.status(500).json({ message: "Internal server error" });
+        next(error);
     }
 }

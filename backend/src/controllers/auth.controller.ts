@@ -42,7 +42,7 @@ export const signup = async (
     });
   } catch (error) {
     console.error("Signup error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };
 
@@ -94,13 +94,12 @@ export const login = async (
       .json({ message: "Login successful" });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };
 
 export const me = async (req: Request, res: Response, next: NextFunction) => {
   try {
-
     if (!req.decoded) {
       return res.status(401).json({ message: "Unauthorized" });
     }
@@ -113,6 +112,6 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
     res.status(200).json({ user });
   } catch (error) {
     console.error("Me error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };
