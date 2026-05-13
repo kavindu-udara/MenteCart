@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
 import bcrypt from "bcryptjs";
 import { loginSchema, signupSchema } from "../lib/zodSchemas";
+import jwt from "jsonwebtoken";
 
 export const signup = async (
   req: Request,
@@ -69,15 +70,26 @@ export const login = async (
             return res.status(401).json({ message: "Invalid email or password" });
         }
 
+        // compare password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Invalid email or password" });
         }
 
-        // TODO: Generate JWT token and return to client
-        
+        // generate JWT token
+        const token = jwt.sign(
+            { userId: user._id, email: user.email },
+            process.env.JWT_SECRET || "jwt_secret",
+            { expiresIn: "24h" }
+        );
 
-        res.status(200).json({ message: "Login successful" });
+        // set token in httpOnly cookie
+        res.cookie("access_token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        }).status(200).json({ message: "Login successful" });
 
     } catch (error) {
         console.error("Login error:", error);
