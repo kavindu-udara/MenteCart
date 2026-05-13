@@ -1,16 +1,16 @@
 import mongoose from "mongoose";
 
 export interface IUser {
-    email: string;
-    role: "admin" | "user";
-    password: string;
+  email: string;
+  role: "admin" | "user";
+  password: string;
 }
 
-const userSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema<IUser>(
   {
     email: { type: String, required: true, unique: true, length: 100 },
     role: { type: String, enum: ["admin", "user"], default: "user" },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
   },
   { timestamps: true },
 );
