@@ -1,5 +1,15 @@
 import mongoose from "mongoose";
 
+export interface IService {
+    title: string;
+    description: string;
+    price: number;
+    duration: number; // in minutes
+    categoryId: mongoose.Types.ObjectId;
+    imageUrl: string;
+    capacityPerSlot: number;
+} 
+
 const serviceSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
