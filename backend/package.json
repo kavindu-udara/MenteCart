@@ -2,12 +2,21 @@
   "name": "mentecart-backend",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
+    "dev" : "nodemon --exec tsx src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.12.4"
+  "packageManager": "pnpm@10.12.4",
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "tsx": "^4.21.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
 }
