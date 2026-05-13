@@ -1,6 +1,9 @@
+import mongoose from "mongoose";
 import { Request, Response } from "express";
-import "../models/serviceCategory.model";
+import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export const getAllServices = async (req: Request, res: Response) => {
   try {
@@ -8,8 +11,27 @@ export const getAllServices = async (req: Request, res: Response) => {
     const limit = Math.max(Number(req.query.limit) || 20, 1);
     const skip = (page - 1) * limit;
 
-    const total = await Service.countDocuments();
-    const services = await Service.find()
+    const filter: Record<string, unknown> = {};
+    const categoryParam = typeof req.query.category === "string" ? req.query.category.trim() : "";
+
+    if (categoryParam) {
+      if (mongoose.Types.ObjectId.isValid(categoryParam)) {
+        filter.categoryId = categoryParam;
+      } else {
+        const category = await ServiceCategory.findOne({
+          name: new RegExp(`^${escapeRegex(categoryParam)}$`, "i"),
+        });
+
+        if (!category) {
+          return res.status(404).json({ message: "Category not found" });
+        }
+
+        filter.categoryId = category._id;
+      }
+    }
+
+    const total = await Service.countDocuments(filter);
+    const services = await Service.find(filter)
       .populate("categoryId", "name description")
       .skip(skip)
       .limit(limit)
