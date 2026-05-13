@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { connectDB } from "./db";
+import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
 
 dotenv.config();
@@ -51,12 +52,42 @@ const services = [
   },
 ];
 
+const categories = [
+  {
+    name: "Cleaning",
+    description: "Cleaning and housekeeping related services.",
+  },
+  {
+    name: "Home Services",
+    description: "Repairs and maintenance services for the home.",
+  },
+  {
+    name: "Education",
+    description: "Tutoring and educational support services.",
+  },
+  {
+    name: "Beauty",
+    description: "Beauty, grooming, and personal care services.",
+  },
+];
+
 const seedServices = async () => {
   try {
     await connectDB();
 
+    await ServiceCategory.deleteMany({});
+    const createdCategories = await ServiceCategory.insertMany(categories);
+    const categoryMap = new Map(
+      createdCategories.map((category) => [category.name, category._id]),
+    );
+
     await Service.deleteMany({});
-    await Service.insertMany(services);
+    await Service.insertMany(
+      services.map((service) => ({
+        ...service,
+        categoryId: categoryMap.get(service.category),
+      })),
+    );
 
     console.log(`Seeded ${services.length} services successfully.`);
     process.exit(0);

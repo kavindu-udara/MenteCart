@@ -6,7 +6,7 @@ const serviceSchema = new mongoose.Schema(
     description: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     duration: { type: Number, required: true, min: 15 },
-    category: { type: String, required: true },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref : 'ServiceCategory', required: true },
     imageUrl: { type: String, required: true },
     capacityPerSlot: { type: Number, required: true, default: 1, min: 1 },
   },
