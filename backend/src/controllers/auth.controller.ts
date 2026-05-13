@@ -26,6 +26,7 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
     } 
 
     // TODO: hash password before saving to db
+    
 
     // create new user
     const newUser = new User({ email, password });
