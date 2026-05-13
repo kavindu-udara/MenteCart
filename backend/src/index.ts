@@ -1,10 +1,13 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+
 import { connectDB } from './lib/db';
+import createRedisClient from './lib/redis';
+
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
-import createRedisClient from './lib/redis';
+import cartRoutes from './routes/cart.route';
 
 dotenv.config();
 await connectDB();
@@ -27,6 +30,8 @@ app.get('/test', (req, res) => {
 app.use('/api/auth', authRoutes);
 // services routes
 app.use('/api/services', servicesRoutes);
+// cart routes
+app.use('/api/cart', cartRoutes);
 
 // 404 for undefined routes
 app.use((req, res) => {
