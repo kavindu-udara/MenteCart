@@ -1,6 +1,15 @@
 import mongoose from "mongoose";
 import { cartItemSchema } from "./cartItem.model";
 
+export interface ICartItem {
+    serviceId: mongoose.Types.ObjectId;
+    selectedDate: Date;
+    timeSlotStart: string;
+    timeSlotEnd: string;
+    quantity: number;
+    priceAtAdd: number;
+}
+
 const cartSchema = new mongoose.Schema({
     userId : { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: [cartItemSchema],
