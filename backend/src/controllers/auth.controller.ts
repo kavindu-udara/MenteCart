@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
 import bcrypt from "bcryptjs";
-import { signupSchema } from "../lib/zodSchemas";
+import { loginSchema, signupSchema } from "../lib/zodSchemas";
 
 export const signup = async (
   req: Request,
@@ -43,4 +43,44 @@ export const signup = async (
     console.error("Signup error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
+};
+
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+    try {
+        
+        const result = loginSchema.safeParse(req.body);
+
+        if (!result.success) {
+            return res.status(400).json({
+                message: "Validation failed",
+                errors: result.error.flatten().fieldErrors,
+            });
+        }
+
+        const { email, password } = result.data;
+
+        // find user in db
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        // TODO: Generate JWT token and return to client
+        
+
+        res.status(200).json({ message: "Login successful" });
+
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ message: "Internal server error" });   
+    }
 };
