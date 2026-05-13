@@ -100,18 +100,12 @@ export const login = async (
 
 export const me = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // get barer token from cookies
-    const token = req.cookies.access_token;
-    if (!token) {
+
+    if (!req.decoded) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // verify token
-    const decoded: any = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "jwt_secret",
-    );
-    const user = await User.findById(decoded.userId).select("-password");
+    const user = await User.findById(req.decoded.userId).select("-password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
