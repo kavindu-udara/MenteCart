@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './lib/db';
+import authRoutes from './routes/auth.route';
 
 dotenv.config();
 await connectDB();
@@ -8,9 +9,12 @@ await connectDB();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/', (req, res) => {
+app.get('/test', (req, res) => {
     res.send('Hello, MenteCart!');
 });
+
+// auth routes
+app.use('/api/auth', authRoutes);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
