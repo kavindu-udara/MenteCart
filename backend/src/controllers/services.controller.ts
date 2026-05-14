@@ -2,12 +2,10 @@ import mongoose from "mongoose";
 import { NextFunction, Request, Response } from "express";
 import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
-import createRedisClient from "../lib/redis";
+import { RedisService } from "../services/redis.service";
 
 const categoryRegex = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const redisClient = await createRedisClient();
 
 export const getAllServices = async (
   req: Request,
@@ -17,7 +15,7 @@ export const getAllServices = async (
   try {
     // check cache first
     const cacheKey = `services:${JSON.stringify(req.query)}`;
-    const cachedData = await redisClient.get(cacheKey);
+    const cachedData = await RedisService.get(cacheKey);
 
     // if cache hit, return cached data
     if (cachedData) {
@@ -59,9 +57,8 @@ export const getAllServices = async (
     const hasMore = page * limit < total;
 
     // cache the result for 10 minutes
-    await redisClient.setEx(
+    await RedisService.set(
       cacheKey,
-      600,
       JSON.stringify({
         services,
         total,
@@ -70,6 +67,7 @@ export const getAllServices = async (
         limit,
         message: "Services retrieved successfully",
       }),
+      600,
     );
 
     res.status(200).json({
@@ -94,7 +92,7 @@ export const getServiceById = async (
   try {
     // check cache first
     const cacheKey = `service:${JSON.stringify(req.query)}`;
-    const cachedData = await redisClient.get(cacheKey);
+    const cachedData = await RedisService.get(cacheKey);
 
     // if cache hit, return cached data
     if (cachedData) {
@@ -114,10 +112,10 @@ export const getServiceById = async (
     }
 
     // cache the result for 10 minutes
-    await redisClient.setEx(
+    await RedisService.set(
       cacheKey,
-      600,
       JSON.stringify({ service, message: "Service retrieved successfully" }),
+      600,
     );
 
     res

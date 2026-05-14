@@ -3,12 +3,12 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
 import { connectDB } from './lib/db';
-import createRedisClient from './lib/redis';
 
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
 import cartRoutes from './routes/cart.route';
 import { errorMiddleware } from './middlewares/error.middleware';
+import { RedisService } from './services/redis.service';
 
 dotenv.config();
 await connectDB();
@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // redis
-await createRedisClient();
+await RedisService.create();
 
 const PORT = process.env.PORT || 3000;
 
