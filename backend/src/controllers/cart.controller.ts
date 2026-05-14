@@ -1,10 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import CartItem from "../models/cartItem.model";
-import { IService } from "../models/service.model";
 import { addToCartSchema } from "../lib/zodSchemas";
 import { CartService } from "../services/cart.service";
 import { AppError, ErrorCode } from "../utils/appError";
-import { RedisService } from "../services/redis.service";
 
 const cartService = new CartService();
 
@@ -68,9 +65,20 @@ export class CartController {
         );
       }
 
+      // if itemId type is not string, return validation error
+      if (typeof itemId !== "string") {
+        return next(
+          new AppError(
+            400,
+            ErrorCode.VALIDATION_ERROR,
+            "itemId must be a string",
+          ),
+        );
+      }
+
       const cart = await cartService.updateItem(
         userId,
-        itemId as string,
+        itemId,
         selectedDate,
         timeSlotStart,
         timeSlotEnd,
@@ -82,6 +90,34 @@ export class CartController {
       });
     } catch (error) {
       console.error("Update cart item error:", error);
+      next(error);
+    }
+  }
+
+  async removeItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.decoded.userId;
+      const itemId = req.params.itemId;
+
+      // if itemId type is not string, return validation error
+      if (typeof itemId !== "string") {
+        return next(
+          new AppError(
+            400,
+            ErrorCode.VALIDATION_ERROR,
+            "itemId must be a string",
+          ),
+        );
+      }
+
+      const cart = await cartService.removeItem(userId, itemId);
+
+      res.status(200).json({
+        message: "Cart item removed successfully",
+        cart,
+      });
+    } catch (error) {
+      console.error("Remove cart item error:", error);
       next(error);
     }
   }
