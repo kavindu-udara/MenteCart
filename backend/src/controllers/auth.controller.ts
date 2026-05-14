@@ -1,118 +1,92 @@
 import { NextFunction, Request, Response } from "express";
-import User from "../models/user.model";
-import bcrypt from "bcryptjs";
 import { loginSchema, signupSchema } from "../lib/zodSchemas";
-import jwt from "jsonwebtoken";
+import { AuthService } from "../services/auth.service";
+import { AppError, ErrorCode } from "../utils/appError";
 
-export const signup = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const result = signupSchema.safeParse(req.body);
+const authService = new AuthService();
 
-    if (!result.success) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: result.error.flatten().fieldErrors,
+export class AuthController {
+  async signup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = signupSchema.safeParse(req.body);
+
+      if (!result.success) {
+        return next(
+          new AppError(
+            400,
+            ErrorCode.VALIDATION_ERROR,
+            JSON.stringify(result.error.flatten().fieldErrors),
+          ),
+        );
+      }
+
+      const { email, password } = result.data;
+
+      const newUser = await authService.register(email, password, "user");
+
+      res.status(201).json({
+        message: "User registered successfully",
+        user: {
+          email: newUser.email,
+          role: newUser.role,
+        },
       });
+    } catch (error) {
+      console.error("Signup error:", error);
+      next(error);
     }
-
-    const { email, password } = result.data;
-
-    // find user in db
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email already in use" });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // create new user
-    const newUser = new User({ email, password: hashedPassword });
-    await newUser.save();
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: {
-        email,
-      },
-    });
-  } catch (error) {
-    console.error("Signup error:", error);
-    res.status(500).json({ message: "Internal server error" });
   }
-};
 
-export const login = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const result = loginSchema.safeParse(req.body);
+  async login(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = loginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          message: "Validation failed",
+          errors: result.error.flatten().fieldErrors,
+        });
+      }
 
-    if (!result.success) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: result.error.flatten().fieldErrors,
-      });
+      const { email, password } = result.data;
+
+      const token = await authService.login(email, password);
+
+      // set token in httpOnly cookie
+      res
+        .cookie("access_token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        })
+        .status(200)
+        .json({ message: "Login successful" });
+    } catch (error) {
+      console.error("Login error:", error);
+      next(error);
     }
-
-    const { email, password } = result.data;
-
-    // find user in db
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    // compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    // generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email },
-      process.env.JWT_SECRET || "jwt_secret",
-      { expiresIn: "24h" },
-    );
-
-    // set token in httpOnly cookie
-    res
-      .cookie("access_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      })
-      .status(200)
-      .json({ message: "Login successful" });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Internal server error" });
   }
-};
 
-export const me = async (req: Request, res: Response, next: NextFunction) => {
-  try {
+  async me(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.decoded) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
-    if (!req.decoded) {
-      return res.status(401).json({ message: "Unauthorized" });
+      const user = await authService.getUserByEmail(req.decoded.email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res
+        .status(200)
+        .json({
+          user: { email: user.email, role: user.role },
+          message: "User retrieved successfully",
+        });
+    } catch (error) {
+      console.error("Me error:", error);
+      next(error);
     }
-
-    const user = await User.findById(req.decoded.userId).select("-password");
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({ user });
-  } catch (error) {
-    console.error("Me error:", error);
-    res.status(500).json({ message: "Internal server error" });
   }
-};
+}

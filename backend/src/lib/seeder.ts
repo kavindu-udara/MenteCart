@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
-import { connectDB } from "./db";
 import ServiceCategory from "../models/serviceCategory.model";
 import Service from "../models/service.model";
+import { DB } from "./db";
 
 dotenv.config();
 
@@ -73,7 +73,7 @@ const categories = [
 
 const seedServices = async () => {
   try {
-    await connectDB();
+    await DB.connect();
 
     await ServiceCategory.deleteMany({});
     const createdCategories = await ServiceCategory.insertMany(categories);

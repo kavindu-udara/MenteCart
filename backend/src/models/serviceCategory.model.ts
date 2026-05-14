@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 
-const serviceCategorySchema = new mongoose.Schema(
+export interface IServiceCategory {
+  name: string;
+  description: string;
+}
+
+const serviceCategorySchema = new mongoose.Schema<IServiceCategory>(
   {
     name: { type: String, required: true, unique: true },
     description: { type: String, required: true },

@@ -1,13 +1,19 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { connectDB } from './lib/db';
+
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
-import createRedisClient from './lib/redis';
+import cartRoutes from './routes/cart.route';
+import { errorMiddleware } from './middlewares/error.middleware';
+import { RedisService } from './services/redis.service';
+import { DB } from './lib/db';
+import { cartJob } from './lib/cron';
 
 dotenv.config();
-await connectDB();
+
+// connect to database
+await DB.connect();
 
 const app = express();
 app.use(express.json());
@@ -15,7 +21,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // redis
-await createRedisClient();
+await RedisService.create();
+
+// start cart cron job
+cartJob.start();
 
 const PORT = process.env.PORT || 3000;
 
@@ -27,11 +36,15 @@ app.get('/test', (req, res) => {
 app.use('/api/auth', authRoutes);
 // services routes
 app.use('/api/services', servicesRoutes);
+// cart routes
+app.use('/api/cart', cartRoutes);
 
 // 404 for undefined routes
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
+
+app.use(errorMiddleware);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
