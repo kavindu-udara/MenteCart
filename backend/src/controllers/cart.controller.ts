@@ -1,12 +1,11 @@
 import { NextFunction, Request, Response } from "express";
-import createRedisClient from "../lib/redis";
 import CartItem from "../models/cartItem.model";
 import { IService } from "../models/service.model";
 import { addToCartSchema } from "../lib/zodSchemas";
 import { CartService } from "../services/cart.service";
 import { AppError, ErrorCode } from "../utils/appError";
+import { RedisService } from "../services/redis.service";
 
-const redisClient = await createRedisClient();
 const cartService = new CartService();
 
 export class CartController {
@@ -64,7 +63,7 @@ export const getUserCart = async (
 
     // check cache first
     const cacheKey = `cart:${userId}`;
-    const cachedData = await redisClient.get(cacheKey);
+    const cachedData = await RedisService.get(cacheKey);
 
     // if cache hit, return cached data
     if (cachedData) {
@@ -82,14 +81,14 @@ export const getUserCart = async (
     }, 0);
 
     // cache the result for 10 minutes
-    await redisClient.setEx(
+    await RedisService.set(
       cacheKey,
-      600,
       JSON.stringify({
         cartItems,
         totalPrice,
         message: "Cart retrieved successfully",
       }),
+      600,
     );
 
     res.status(200).json({
@@ -109,7 +108,6 @@ export const addItemToCart = async (
   next: NextFunction,
 ) => {
   try {
-    // TODO: validate request body using zod
     const userId = req.decoded.userId;
 
     const result = addToCartSchema.safeParse(req.body);
@@ -138,7 +136,7 @@ export const addItemToCart = async (
 
     // invalidate cache for user cart
     const cacheKey = `cart:${userId}`;
-    await redisClient.del(cacheKey);
+    await RedisService.del(cacheKey);
 
     res.status(200).json({
       message: "Item added to cart successfully",
