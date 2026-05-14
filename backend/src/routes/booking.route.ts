@@ -7,6 +7,7 @@ const bookingController = new BookingController();
 const router = express.Router();
 router.get("/", verifyUser, bookingController.getBookings);
 router.get("/:bookingId", verifyUser, bookingController.getBookingById);
+router.post("/:bookingId/cancel", verifyUser, bookingController.cancelBooking);
 router.post("/checkout", verifyUser, bookingController.checkout);
 
 export default router;

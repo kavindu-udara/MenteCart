@@ -2,12 +2,16 @@ import Booking, { IBooking, PaymentMethod } from "../models/booking.model";
 import Cart from "../models/cart.model";
 import Service from "../models/service.model";
 import { SlotCapacity } from "../models/slotCapacity.model";
-import { AppError } from "../utils/appError";
+import { AppError, ErrorCode } from "../utils/appError";
 
 export class BookingService {
   private MAX_DAILY_BOOKINGS: number = parseInt(
     process.env.MAX_DAILY_BOOKINGS || "3",
     10,
+  );
+
+  private CANCELLATION_CUTOFF_HOURS: number = parseInt(
+    process.env.CANCELLATION_CUTOFF_HOURS || "2",
   );
 
   async getBookingsByUser(userId: string): Promise<IBooking[]> {
@@ -143,6 +147,92 @@ export class BookingService {
         throw error;
       }
       throw new AppError(500, "CHECKOUT_FAILED", "Checkout process failed");
+    }
+  }
+
+  async cancelBooking(userId: string, bookingId: string): Promise<IBooking> {
+    try {
+      const booking = await Booking.findById(bookingId);
+
+      if (!booking) {
+        throw new AppError(404, "BOOKING_NOT_FOUND", "Booking not found");
+      }
+
+      if (booking.userId.toString() !== userId) {
+        throw new AppError(
+          403,
+          "FORBIDDEN",
+          "You are not allowed to cancel this booking",
+        );
+      }
+
+      // validate cut off rules
+      const now = new Date();
+      for (const item of booking.items) {
+        const slotStart = new Date(item.selectedDate);
+        const [hours, minutes] = item.timeSlotStart.split(":").map(Number);
+        slotStart.setHours(hours, minutes, 0, 0);
+
+        const hoursUntilSlot =
+          (slotStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+        if (hoursUntilSlot < this.CANCELLATION_CUTOFF_HOURS) {
+          throw new AppError(
+            400,
+            "CANCELLATION_CUTOFF_PASSED",
+            `Cancellations not allowed within ${this.CANCELLATION_CUTOFF_HOURS} hours of the appointment`,
+          );
+        }
+      }
+
+      const validStatuses = ["pending", "confirmed"];
+      if (!validStatuses.includes(booking.status)) {
+        throw new AppError(
+          400,
+          "CANCELLATION_NOT_ALLOWED",
+          `Only bookings with status ${validStatuses.join(
+            " or ",
+          )} can be cancelled`,
+        );
+      }
+
+      // release capacity back to pool
+      if (booking.status === "pending" || booking.status === "confirmed") {
+        const bulkOps = booking.items.map((item) => ({
+          updateOne: {
+            filter: {
+              serviceId: item.serviceId,
+              date: new Date(item.selectedDate).setHours(0, 0, 0, 0), // normalize
+              timeSlotStart: item.timeSlotStart,
+              bookedCount: { $gt: 0 },
+            },
+            update: { $inc: { bookedCount: -1 } },
+          },
+        }));
+
+        if (bulkOps.length > 0) {
+          await SlotCapacity.bulkWrite(bulkOps);
+        }
+      }
+
+      // update booking status
+      booking.status = "cancelled";
+      booking.cancelledAt = new Date();
+      booking.statusHistory.push({
+        status: "cancelled",
+        timestamp: new Date(),
+        reason: "Cancelled by user",
+      });
+      await booking.save();
+    } catch (error) {
+      console.error("Cancel booking error:", error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(
+        500,
+        "CANCEL_BOOKING_FAILED",
+        "Failed to cancel booking",
+      );
     }
   }
 

@@ -111,4 +111,40 @@ export class BookingController {
       next(error);
     }
   }
+
+  async cancelBooking(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.decoded.userId;
+      const { bookingId } = req.params;
+
+      if (bookingId && typeof bookingId !== "string") {
+        return next(
+          new AppError(
+            400,
+            ErrorCode.VALIDATION_ERROR,
+            "Invalid booking ID format",
+          ),
+        );
+      }
+
+      const cancelledBooking = await bookingService.cancelBooking(
+        userId,
+        bookingId,
+      );
+
+      // invalidate bookings cache
+      const cacheKey = `bookings:${userId}`;
+      await RedisService.del(cacheKey);
+
+      res
+        .status(200)
+        .json({
+          booking: cancelledBooking,
+          message: "Booking cancelled successfully",
+        });
+    } catch (error) {
+      console.error("Cancel booking error:", error);
+      next(error);
+    }
+  }
 }
