@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 
+export type PaymentMethod = "payhere" | "cash" | "pay_on_arrival";
+
 export interface IBooking {
   userId: mongoose.Types.ObjectId;
   status: "pending" | "confirmed" | "completed" | "cancelled" | "failed";
-  paymentMethod: "payhere" | "cash" | "pay_on_arrival";
-  paymentStatus: "pending" | "paid" | "failed";
+  paymentMethod: PaymentMethod;
+  paymentStatus: "pending" | "paid" | "unpaid" | "failed";
   totalAmount: number;
   items: {
     serviceId: mongoose.Types.ObjectId;
@@ -42,7 +44,7 @@ const bookingSchema = new mongoose.Schema<IBooking>(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["pending", "paid", "unpaid", "failed"],
       default: "pending",
     },
     totalAmount: { type: Number, required: true, min: 0 },

@@ -25,3 +25,7 @@ export const addToCartSchema = z.object({
   timeSlotStart: z.string().trim().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:mm)"),
   timeSlotEnd: z.string().trim().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:mm)"),
 });
+
+export const bookingCheckoutSchema = z.object({
+  paymentMethod: z.enum(["payhere", "cash", "pay_on_arrival"], "Invalid payment method"),
+});
