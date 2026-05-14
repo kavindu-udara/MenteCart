@@ -145,6 +145,77 @@ export class CartService {
     }
   }
 
+  async updateItem(
+    userId: string,
+    itemId: string,
+    selectedDate: string,
+    timeSlotStart: string,
+    timeSlotEnd: string,
+  ): Promise<ICart> {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const cart = await Cart.findOne({ userId }).session(session);
+      if (!cart) throw new AppError(404, "CART_NOT_FOUND", "Cart not found");
+
+        const itemIndex = cart.items.findIndex(
+            (i) => i._id.toString() === itemId,
+        );
+        if (itemIndex === -1)
+            throw new AppError(404, "ITEM_NOT_FOUND", "Item not in cart");
+        
+      const item = cart.items[itemIndex];
+
+        // Check capacity for new slot
+        const capacityDoc = await SlotCapacity.findOneAndUpdate(
+            {
+                serviceId: item.serviceId,
+                date: new Date(selectedDate),
+                timeSlotstart: timeSlotStart,
+                timeSlotEnd: timeSlotEnd,
+                $expr: { $lt: ["$bookedCount", "$maxCapacity"] },
+            },
+            { $inc: { bookedCount: 1 } },
+            { session, upsert: true, new: true },
+        );
+        if (!capacityDoc) {
+            throw new AppError(
+                409,
+                ErrorCode.SLOT_FULL,
+                "This time slot is fully booked",
+            );
+        }
+
+        // Release old slot
+        await SlotCapacity.updateOne(
+            {
+                serviceId: item.serviceId,
+                date: item.selectedDate,
+                timeSlotStart: item.timeSlotStart,
+                timeSlotEnd: item.timeSlotEnd,
+            },
+            { $inc: { bookedCount: -1 } },
+            { session },
+        );
+
+      // Update item details
+      item.selectedDate = new Date(selectedDate);
+      item.timeSlotStart = timeSlotStart;
+      item.timeSlotEnd = timeSlotEnd;
+      item.addedAt = new Date(); // reset expiry
+
+      this.recalculateTotal(cart);
+      await cart.save({ session });
+      await session.commitTransaction();
+      return cart;
+    } catch (err) {
+      await session.abortTransaction();
+      throw err;
+    } finally {
+      session.endSession();
+    }
+  }
+
   // Lazy expiry cleanup
   private async cleanExpiredItems(cart: ICart): Promise<void> {
     const expiryThreshold = new Date(Date.now() - CART_EXPIRY_MS);

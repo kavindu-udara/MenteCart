@@ -51,4 +51,39 @@ export class CartController {
       next(error);
     }
   }
+
+  async updateItem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.decoded.userId;
+      const itemId = req.params.itemId;
+      const { selectedDate, timeSlotStart, timeSlotEnd } = req.body;
+
+      if (!selectedDate || !timeSlotStart || !timeSlotEnd) {
+        return next(
+          new AppError(
+            400,
+            ErrorCode.VALIDATION_ERROR,
+            "selectedDate, timeSlotStart and timeSlotEnd are required",
+          ),
+        );
+      }
+
+      const cart = await cartService.updateItem(
+        userId,
+        itemId as string,
+        selectedDate,
+        timeSlotStart,
+        timeSlotEnd,
+      );
+
+      res.status(200).json({
+        message: "Cart item updated successfully",
+        cart,
+      });
+    } catch (error) {
+      console.error("Update cart item error:", error);
+      next(error);
+    }
+  }
+
 }
