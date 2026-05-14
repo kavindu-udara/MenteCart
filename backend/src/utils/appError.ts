@@ -4,6 +4,7 @@ export enum ErrorCode {
 	ITEM_DUPLICATE = "ITEM_DUPLICATE",
 	CART_NOT_FOUND = "CART_NOT_FOUND",
 	ITEM_NOT_FOUND = "ITEM_NOT_FOUND",
+    VALIDATION_ERROR = "VALIDATION_ERROR",
 }
 
 export class AppError extends Error {
