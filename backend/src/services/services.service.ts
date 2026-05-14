@@ -1,4 +1,5 @@
 import Service, { IService } from "../models/service.model";
+import "../models/serviceCategory.model";
 import { AppError } from "../utils/appError";
 
 export class ServicesService {
