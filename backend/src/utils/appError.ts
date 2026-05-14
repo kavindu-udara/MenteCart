@@ -5,6 +5,7 @@ export enum ErrorCode {
 	CART_NOT_FOUND = "CART_NOT_FOUND",
 	ITEM_NOT_FOUND = "ITEM_NOT_FOUND",
     VALIDATION_ERROR = "VALIDATION_ERROR",
+    REDIS_CONNECTION_ERROR = "REDIS_CONNECTION_ERROR",
 }
 
 export class AppError extends Error {
