@@ -8,6 +8,7 @@ import cartRoutes from './routes/cart.route';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { RedisService } from './services/redis.service';
 import { DB } from './lib/db';
+import { cartJob } from './lib/cron';
 
 dotenv.config();
 
@@ -21,6 +22,9 @@ app.use(cookieParser());
 
 // redis
 await RedisService.create();
+
+// start cart cron job
+cartJob.start();
 
 const PORT = process.env.PORT || 3000;
 
