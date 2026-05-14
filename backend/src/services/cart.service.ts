@@ -26,11 +26,8 @@ export class CartService {
     timeSlotStart: string,
     timeSlotEnd: string,
   ): Promise<ICart> {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-      const service = await Service.findById(serviceId).session(session);
+      const service = await Service.findById(serviceId);
       if (!service)
         throw new AppError(
           404,
@@ -38,16 +35,16 @@ export class CartService {
           "Service not found",
         );
 
+      // Check capacity for the slot
       const capacityDoc = await SlotCapacity.findOneAndUpdate(
         {
           serviceId: service._id,
           date: new Date(selectedDate),
-          timeSlotstart: timeSlotStart,
+          timeSlotStart: timeSlotStart,
           timeSlotEnd: timeSlotEnd,
-          $expr: { $lt: ["$bookedCount", "$maxCapacity"] },
         },
         { $inc: { bookedCount: 1 } },
-        { session, upsert: true, new: true },
+        { upsert: true, new: true },
       );
 
       if (!capacityDoc) {
@@ -59,7 +56,7 @@ export class CartService {
       }
 
       // Get/Create cart & clean expired
-      let cart = await Cart.findOne({ userId }).session(session);
+      let cart = await Cart.findOne({ userId });
       if (!cart)
         cart = await Cart.create({ userId, items: [], totalAmount: 0 });
       await this.cleanExpiredItems(cart);
@@ -80,7 +77,7 @@ export class CartService {
           "Slot already in cart",
         );
 
-      // ➕ Add item with price snapshot
+      // Add item with price snapshot
       const newItem: ICartItem = {
         _id: new mongoose.Types.ObjectId(),
         serviceId: service._id,
@@ -94,23 +91,17 @@ export class CartService {
 
       cart.items.push(newItem);
       this.recalculateTotal(cart);
-      await cart.save({ session });
+      await cart.save();
 
-      await session.commitTransaction();
       return cart;
     } catch (err) {
-      await session.abortTransaction();
       throw err;
-    } finally {
-      session.endSession();
     }
   }
 
   async removeItem(userId: string, itemId: string): Promise<ICart> {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-      const cart = await Cart.findOne({ userId }).session(session);
+      const cart = await Cart.findOne({ userId });
       if (!cart) throw new AppError(404, "CART_NOT_FOUND", "Cart not found");
 
       const itemIndex = cart.items.findIndex(
@@ -129,19 +120,13 @@ export class CartService {
           timeSlotEnd: item.timeSlotEnd,
         },
         { $inc: { bookedCount: -1 } },
-        { session },
       );
 
       cart.items.splice(itemIndex, 1);
       this.recalculateTotal(cart);
-      await cart.save({ session });
-      await session.commitTransaction();
       return cart;
     } catch (err) {
-      await session.abortTransaction();
       throw err;
-    } finally {
-      session.endSession();
     }
   }
 
@@ -152,51 +137,49 @@ export class CartService {
     timeSlotStart: string,
     timeSlotEnd: string,
   ): Promise<ICart> {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-      const cart = await Cart.findOne({ userId }).session(session);
+      const cart = await Cart.findOne({ userId });
       if (!cart) throw new AppError(404, "CART_NOT_FOUND", "Cart not found");
 
-        const itemIndex = cart.items.findIndex(
-            (i) => i._id.toString() === itemId,
-        );
-        if (itemIndex === -1)
-            throw new AppError(404, "ITEM_NOT_FOUND", "Item not in cart");
-        
+      const itemIndex = cart.items.findIndex(
+        (i) => i._id.toString() === itemId,
+      );
+      if (itemIndex === -1)
+        throw new AppError(404, "ITEM_NOT_FOUND", "Item not in cart");
+
       const item = cart.items[itemIndex];
 
-        // Check capacity for new slot
-        const capacityDoc = await SlotCapacity.findOneAndUpdate(
-            {
-                serviceId: item.serviceId,
-                date: new Date(selectedDate),
-                timeSlotstart: timeSlotStart,
-                timeSlotEnd: timeSlotEnd,
-                $expr: { $lt: ["$bookedCount", "$maxCapacity"] },
-            },
-            { $inc: { bookedCount: 1 } },
-            { session, upsert: true, new: true },
-        );
-        if (!capacityDoc) {
-            throw new AppError(
-                409,
-                ErrorCode.SLOT_FULL,
-                "This time slot is fully booked",
-            );
-        }
+      // Check capacity for new slot
+      const capacityDoc = await SlotCapacity.findOneAndUpdate(
+        {
+          serviceId: item.serviceId,
+          date: new Date(selectedDate),
+          timeSlotStart: timeSlotStart,
+          timeSlotEnd: timeSlotEnd,
+          $expr: { $lt: ["$bookedCount", "$maxCapacity"] },
+        },
+        { $inc: { bookedCount: 1 } },
+        { upsert: true, new: true },
+      );
 
-        // Release old slot
-        await SlotCapacity.updateOne(
-            {
-                serviceId: item.serviceId,
-                date: item.selectedDate,
-                timeSlotStart: item.timeSlotStart,
-                timeSlotEnd: item.timeSlotEnd,
-            },
-            { $inc: { bookedCount: -1 } },
-            { session },
+      if (!capacityDoc) {
+        throw new AppError(
+          409,
+          ErrorCode.SLOT_FULL,
+          "This time slot is fully booked",
         );
+      }
+
+      // Release old slot
+      await SlotCapacity.updateOne(
+        {
+          serviceId: item.serviceId,
+          date: item.selectedDate,
+          timeSlotStart: item.timeSlotStart,
+          timeSlotEnd: item.timeSlotEnd,
+        },
+        { $inc: { bookedCount: -1 } },
+      );
 
       // Update item details
       item.selectedDate = new Date(selectedDate);
@@ -205,14 +188,9 @@ export class CartService {
       item.addedAt = new Date(); // reset expiry
 
       this.recalculateTotal(cart);
-      await cart.save({ session });
-      await session.commitTransaction();
       return cart;
     } catch (err) {
-      await session.abortTransaction();
       throw err;
-    } finally {
-      session.endSession();
     }
   }
 

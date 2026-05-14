@@ -24,5 +24,4 @@ export const addToCartSchema = z.object({
   }, "Invalid date format"),
   timeSlotStart: z.string().trim().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:mm)"),
   timeSlotEnd: z.string().trim().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:mm)"),
-  quantity: z.number().int().min(1, "Quantity must be at least 1").max(10, "Quantity cannot exceed 10"),
 });
