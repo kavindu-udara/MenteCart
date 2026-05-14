@@ -2,16 +2,17 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
-import { connectDB } from './lib/db';
-
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
 import cartRoutes from './routes/cart.route';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { RedisService } from './services/redis.service';
+import { DB } from './lib/db';
 
 dotenv.config();
-await connectDB();
+
+// connect to database
+await DB.connect();
 
 const app = express();
 app.use(express.json());
