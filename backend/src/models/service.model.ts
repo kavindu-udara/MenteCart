@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
+import { Document } from "mongoose";
 
-export interface IService {
+export interface IService extends Document{
   title: string;
   description: string;
   price: number;

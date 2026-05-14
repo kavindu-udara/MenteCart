@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { RedisService } from "../services/redis.service";
 import { ServicesService } from "../services/services.service";
+import { SlotResponse } from "../types/service";
 
 const servicesService = new ServicesService();
 
@@ -61,22 +62,29 @@ export class ServicesController {
       }
 
       const { id } = req.params;
+      const {date} = req.query;
 
       const service = await servicesService.getServiceById(id as string);
 
-      // cache the result for 10 minutes
-      await RedisService.set(
+      let slots : SlotResponse[] = [];
+      if (date && typeof date === "string") {
+        slots = await servicesService.generateSlotsForDate(service, date);
+      }
+
+       // cache the result for 10 minutes
+       await RedisService.set(
         cacheKey,
-        JSON.stringify({ service, message: "Service retrieved successfully" }),
+        JSON.stringify({ service: { ...service.toObject(), slots }, message: "Service retrieved successfully" }),
         600,
       );
 
       res
         .status(200)
-        .json({ service, message: "Service retrieved successfully" });
+        .json({ service: { ...service.toObject(), slots }, message: "Service retrieved successfully" });
     } catch (error) {
       console.error("Get service by id error:", error);
       next(error);
     }
   }
+
 }

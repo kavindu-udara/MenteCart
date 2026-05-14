@@ -77,7 +77,9 @@ export class AuthService {
     );
   }
 
-  async verifyJWT(token: string): Promise<{ userId: string; email: string; role: string }> {
+  async verifyJWT(
+    token: string,
+  ): Promise<{ userId: string; email: string; role: string }> {
     try {
       return jwt.verify(token, this.JWT_SECRET) as {
         userId: string;
@@ -88,5 +90,4 @@ export class AuthService {
       throw new AppError(401, "INVALID_TOKEN", "Invalid or expired token");
     }
   }
-
 }
