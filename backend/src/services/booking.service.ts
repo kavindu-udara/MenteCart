@@ -21,6 +21,16 @@ export class BookingService {
     return bookings;
   }
 
+  async getBookingById(bookingId: string, userId: string): Promise<IBooking> {
+    const booking = await Booking.findOne({ _id: bookingId, userId });
+
+    if (!booking) {
+      throw new AppError(404, "BOOKING_NOT_FOUND", "Booking not found");
+    }
+
+    return booking;
+  }
+
   async checkout(
     userId: string,
     paymentMethod: PaymentMethod,
