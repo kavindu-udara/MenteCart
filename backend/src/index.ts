@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
 import cartRoutes from './routes/cart.route';
+import bookingRoutes from './routes/booking.route';
+
 import { errorMiddleware } from './middlewares/error.middleware';
 import { RedisService } from './services/redis.service';
 import { DB } from './lib/db';
@@ -38,6 +40,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/services', servicesRoutes);
 // cart routes
 app.use('/api/cart', cartRoutes);
+// booking routes
+app.use('/api/bookings', bookingRoutes);
 
 // 404 for undefined routes
 app.use((req, res) => {
