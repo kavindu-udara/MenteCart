@@ -112,18 +112,28 @@ export class CartService {
 
       const item = cart.items[itemIndex];
 
-      await SlotCapacity.updateOne(
+      const capacityResult = await SlotCapacity.updateOne(
         {
           serviceId: item.serviceId,
-          date: item.selectedDate,
+          date: new Date(item.selectedDate).setHours(0, 0, 0, 0), // normalize
           timeSlotStart: item.timeSlotStart,
-          timeSlotEnd: item.timeSlotEnd,
+          bookedCount: { $gt: 0 }, // sanity check
         },
         { $inc: { bookedCount: -1 } },
       );
 
+      //   if no capacity doc found
+      if (capacityResult.matchedCount === 0) {
+        console.warn(
+          `Capacity doc not found when removing item ${itemId} from cart ${cart._id}. This may indicate a data inconsistency.`,
+        );
+      }
+
       cart.items.splice(itemIndex, 1);
       this.recalculateTotal(cart);
+
+      await cart.save();
+
       return cart;
     } catch (err) {
       throw err;
@@ -156,7 +166,6 @@ export class CartService {
           date: new Date(selectedDate),
           timeSlotStart: timeSlotStart,
           timeSlotEnd: timeSlotEnd,
-          $expr: { $lt: ["$bookedCount", "$maxCapacity"] },
         },
         { $inc: { bookedCount: 1 } },
         { upsert: true, new: true },

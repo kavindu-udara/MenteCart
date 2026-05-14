@@ -58,7 +58,7 @@ export class CartController {
 
       // invalidate cart cache
       const cacheKey = `cart:${userId}`;
-      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Item added to cart successfully" }), 300);
+      await RedisService.del(cacheKey); 
 
       res.status(200).json({
         message: "Item added to cart successfully",
@@ -107,7 +107,7 @@ export class CartController {
 
       // invalidate cart cache
       const cacheKey = `cart:${userId}`;
-      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Cart item updated successfully" }), 300);
+      await RedisService.del(cacheKey);
 
       res.status(200).json({
         message: "Cart item updated successfully",
@@ -139,7 +139,7 @@ export class CartController {
 
       // invalidate cart cache
       const cacheKey = `cart:${userId}`;
-      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Cart item removed successfully" }), 300);
+      await RedisService.del(cacheKey); // delete cache on item removal
 
       res.status(200).json({
         message: "Cart item removed successfully",

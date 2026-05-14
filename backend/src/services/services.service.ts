@@ -58,6 +58,19 @@ export class ServicesService {
   async generateSlotsForDate(service: IService, date: string) : Promise<SlotResponse[]> {
     const slots: SlotResponse[] = [];
     const now = new Date();
+    
+    // Parse the provided date and get today's date at midnight for comparison
+    const providedDate = new Date(date);
+    providedDate.setHours(0, 0, 0, 0);
+    
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    // Validate: reject past dates, only allow today or future dates
+    if (providedDate < today) {
+      throw new AppError(400, "INVALID_DATE", "Cannot generate slots for past dates. Only today and future dates are allowed.");
+    }
+    
     const startOfDay = new Date(date);
     startOfDay.setHours(this.BUSINESS_HOURS.start, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -71,7 +84,7 @@ export class ServicesService {
       if (slotEnd.getTime() > endOfDay.getTime()) break; // Stops if slot passes closing time
 
       // Skip slots that already passed (only for today)
-      const isToday = date.toString() === now.toDateString();
+      const isToday = providedDate.getTime() === today.getTime();
       if (isToday && currentTime < now) {
         currentTime = slotEnd;
         continue;
