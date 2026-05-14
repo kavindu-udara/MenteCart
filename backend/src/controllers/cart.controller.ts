@@ -2,14 +2,30 @@ import { NextFunction, Request, Response } from "express";
 import { addToCartSchema } from "../lib/zodSchemas";
 import { CartService } from "../services/cart.service";
 import { AppError, ErrorCode } from "../utils/appError";
+import { RedisService } from "../services/redis.service";
 
 const cartService = new CartService();
 
 export class CartController {
   async getCart(req: Request, res: Response, next: NextFunction) {
     try {
+
+      // check cache first
+      const cacheKey = `cart:${req.decoded.userId}`;
+      const cachedData = await RedisService.get(cacheKey);
+
+      // if cache hit, return cached data
+      if (cachedData) {
+        console.log("Cache hit for cart");
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
       const userId = req.decoded.userId;
       const cart = await cartService.getCart(userId);
+
+      // cache the result for 5 minutes
+      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Cart retrieved successfully" }), 300);
+
       res.status(200).json({ cart, message: "Cart retrieved successfully" });
     } catch (error) {
       next(error);
@@ -18,6 +34,7 @@ export class CartController {
 
   async addItem(req: Request, res: Response, next: NextFunction) {
     try {
+
       const userId = req.decoded.userId;
       const result = addToCartSchema.safeParse(req.body);
 
@@ -38,6 +55,10 @@ export class CartController {
         timeSlotStart,
         timeSlotEnd,
       );
+
+      // invalidate cart cache
+      const cacheKey = `cart:${userId}`;
+      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Item added to cart successfully" }), 300);
 
       res.status(200).json({
         message: "Item added to cart successfully",
@@ -84,6 +105,10 @@ export class CartController {
         timeSlotEnd,
       );
 
+      // invalidate cart cache
+      const cacheKey = `cart:${userId}`;
+      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Cart item updated successfully" }), 300);
+
       res.status(200).json({
         message: "Cart item updated successfully",
         cart,
@@ -111,6 +136,10 @@ export class CartController {
       }
 
       const cart = await cartService.removeItem(userId, itemId);
+
+      // invalidate cart cache
+      const cacheKey = `cart:${userId}`;
+      await RedisService.set(cacheKey, JSON.stringify({ cart, message: "Cart item removed successfully" }), 300);
 
       res.status(200).json({
         message: "Cart item removed successfully",
