@@ -1,12 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/models/cart_model.dart';
+import '../../data/repositories/cart_repository.dart';
+import '../../../../core/errors/exceptions.dart';
 
 part 'cart_event.dart';
 part 'cart_state.dart';
 
 class CartBloc extends Bloc<CartEvent, CartState> {
-  CartBloc() : super(const CartState.initial()) {
+  final CartRepository _cartRepository;
+
+  CartBloc({required CartRepository cartRepository})
+      : _cartRepository = cartRepository,
+        super(const CartState.initial()) {
     on<CartRequested>(_onRequested);
   }
 
@@ -16,36 +23,19 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   ) async {
     emit(const CartState.loading());
 
-    await Future<void>.delayed(const Duration(milliseconds: 250));
+    try {
+      final cart = await _cartRepository.getCart();
 
-    const items = <CartItemSummary>[
-      CartItemSummary(
-        name: 'Organic Apples',
-        quantity: 2,
-        price: 4.50,
-      ),
-      CartItemSummary(
-        name: 'Wholegrain Bread',
-        quantity: 1,
-        price: 3.20,
-      ),
-      CartItemSummary(
-        name: 'Green Tea Pack',
-        quantity: 3,
-        price: 5.80,
-      ),
-    ];
+      if (cart.items.isEmpty) {
+        emit(const CartState.empty(message: 'Your cart is empty right now.'));
+        return;
+      }
 
-    if (items.isEmpty) {
-      emit(const CartState.empty(message: 'Your cart is empty right now.'));
-      return;
+      emit(CartState.loaded(cart: cart));
+    } on AppException catch (e) {
+      emit(CartState.error(message: e.message));
+    } catch (e) {
+      emit(CartState.error(message: 'Failed to load cart'));
     }
-
-    final total = items.fold<double>(
-      0,
-      (sum, item) => sum + (item.price * item.quantity),
-    );
-
-    emit(CartState.loaded(items: items, total: total));
   }
 }

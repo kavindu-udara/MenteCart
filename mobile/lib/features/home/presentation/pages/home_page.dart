@@ -6,6 +6,7 @@ import '../../../bookings/presentation/bloc/bookings_bloc.dart';
 import '../../../bookings/presentation/pages/bookings_page.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../cart/presentation/pages/cart_page.dart';
+import '../../../cart/data/repositories/cart_repository.dart';
 import '../../data/repositories/services_repository.dart';
 import '../bloc/home_navigation_bloc.dart';
 import '../bloc/home_overview_bloc.dart';
@@ -17,6 +18,8 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final apiClient = ApiClient();
+    
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -26,23 +29,37 @@ class HomePage extends StatelessWidget {
           create: (_) => HomeOverviewBloc()..add(const HomeOverviewRequested()),
         ),
         BlocProvider(
-          create: (_) => CartBloc()..add(const CartRequested()),
+          create: (_) => CartBloc(
+            cartRepository: CartRepository(apiClient: apiClient),
+          )..add(const CartRequested()),
         ),
         BlocProvider(
           create: (_) => BookingsBloc()..add(const BookingsRequested()),
         ),
         BlocProvider(
           create: (_) => ServicesBloc(
-            repository: ServicesRepository(apiClient: ApiClient()),
+            repository: ServicesRepository(apiClient: apiClient),
           )..add(const ServicesRequested()),
         ),
       ],
-      child: BlocBuilder<HomeNavigationBloc, HomeNavigationState>(
-        builder: (context, state) {
-          final currentIndex = switch (state) {
+      child: BlocListener<HomeNavigationBloc, HomeNavigationState>(
+        listener: (context, state) {
+          final index = switch (state) {
             HomeNavigationSelected(:final index) => index,
             _ => 0,
           };
+
+          if (index == 1) {
+            // When Cart tab is selected, refresh cart from backend
+            context.read<CartBloc>().add(const CartRequested());
+          }
+        },
+        child: BlocBuilder<HomeNavigationBloc, HomeNavigationState>(
+          builder: (context, state) {
+            final currentIndex = switch (state) {
+              HomeNavigationSelected(:final index) => index,
+              _ => 0,
+            };
 
           return Scaffold(
             appBar: AppBar(
@@ -101,6 +118,7 @@ class HomePage extends StatelessWidget {
           );
         },
       ),
+    ),
     );
   }
 

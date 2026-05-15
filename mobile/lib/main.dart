@@ -7,6 +7,7 @@ import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/data/data_sources/auth_remote_data_source.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'shared/services/api_client.dart';
+import 'shared/navigation/route_observer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      navigatorObservers: [routeObserver],
       home: BlocProvider(
         create: (context) => AuthBloc(repository: authRepository),
         child: const LoginPage(),

@@ -5,10 +5,7 @@ sealed class CartState {
 
   const factory CartState.initial() = CartInitial;
   const factory CartState.loading() = CartLoading;
-  const factory CartState.loaded({
-    required List<CartItemSummary> items,
-    required double total,
-  }) = CartLoaded;
+  const factory CartState.loaded({required CartModel cart}) = CartLoaded;
   const factory CartState.empty({required String message}) = CartEmpty;
   const factory CartState.error({required String message}) = CartError;
 }
@@ -22,10 +19,9 @@ final class CartLoading extends CartState {
 }
 
 final class CartLoaded extends CartState {
-  final List<CartItemSummary> items;
-  final double total;
+  final CartModel cart;
 
-  const CartLoaded({required this.items, required this.total});
+  const CartLoaded({required this.cart});
 }
 
 final class CartEmpty extends CartState {
@@ -38,16 +34,4 @@ final class CartError extends CartState {
   final String message;
 
   const CartError({required this.message});
-}
-
-final class CartItemSummary {
-  final String name;
-  final int quantity;
-  final double price;
-
-  const CartItemSummary({
-    required this.name,
-    required this.quantity,
-    required this.price,
-  });
 }

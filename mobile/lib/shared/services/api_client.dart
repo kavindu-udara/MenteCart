@@ -54,6 +54,28 @@ class ApiClient {
     }
   }
 
+  /// DELETE request
+  Future<Map<String, dynamic>> delete(String endpoint) async {
+    try {
+      final response = await _dio.delete(endpoint);
+      return response.data is Map ? response.data : {};
+    } on DioException catch (e) {
+      _handleDioError(e);
+      rethrow;
+    }
+  }
+
+  /// PATCH request
+  Future<Map<String, dynamic>> patch(String endpoint, {Map<String, dynamic>? data}) async {
+    try {
+      final response = await _dio.patch(endpoint, data: data);
+      return response.data is Map ? response.data : {};
+    } on DioException catch (e) {
+      _handleDioError(e);
+      rethrow;
+    }
+  }
+
   /// Handle Dio errors and convert to AppException
   void _handleDioError(DioException error) {
     int statusCode = error.response?.statusCode ?? 500;
