@@ -72,6 +72,7 @@ export class CartController {
 
   async updateItem(req: Request, res: Response, next: NextFunction) {
     try {
+      console.log("Update cart item request body:", req.body);
       const userId = req.decoded.userId;
       const itemId = req.params.itemId;
       const { selectedDate, timeSlotStart, timeSlotEnd } = req.body;

@@ -197,6 +197,7 @@ export class CartService {
       item.addedAt = new Date(); // reset expiry
 
       this.recalculateTotal(cart);
+      await cart.save();
       return cart;
     } catch (err) {
       throw err;
