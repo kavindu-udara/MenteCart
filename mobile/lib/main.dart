@@ -5,6 +5,7 @@ import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/data/repositories/auth_repository.dart';
 import 'features/auth/data/data_sources/auth_remote_data_source.dart';
+import 'features/home/presentation/pages/home_page.dart';
 import 'shared/services/api_client.dart';
 
 void main() async {
@@ -35,6 +36,13 @@ class MyApp extends StatelessWidget {
         create: (context) => AuthBloc(repository: authRepository),
         child: const LoginPage(),
       ),
+      routes: {
+        '/login': (context) => BlocProvider(
+          create: (context) => AuthBloc(repository: authRepository),
+          child: const LoginPage(),
+        ),
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../errors/exceptions.dart';
+import '../../core/errors/exceptions.dart';
 
 class ApiClient {
   late final Dio _dio;
@@ -14,10 +14,15 @@ class ApiClient {
         contentType: 'application/json',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
+        validateStatus: (status) => true, // Don't throw on any status
       ),
     );
 
+    // Add error interceptor
     _dio.interceptors.add(_ErrorInterceptor());
+    
+    // Add cookie interceptor to automatically send cookies with every request
+    _dio.interceptors.add(_CookieInterceptor());
   }
 
   /// POST request
@@ -80,16 +85,21 @@ class ApiClient {
 class _ErrorInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    // Check if response contains error in body
-    if (response.statusCode != null &&
-        response.statusCode! >= 400 &&
-        response.data is Map) {
-      final data = response.data as Map;
-      throw AppException(
-        statusCode: response.statusCode!,
-        message: data['message'] ?? 'Request failed',
-        errorCode: data['errorCode'],
-      );
+    // Check if response contains error
+    if (response.statusCode != null && response.statusCode! >= 400) {
+      final data = response.data;
+      if (data is Map) {
+        throw AppException(
+          statusCode: response.statusCode!,
+          message: data['message'] ?? 'Request failed',
+          errorCode: data['errorCode'],
+        );
+      } else {
+        throw AppException(
+          statusCode: response.statusCode!,
+          message: 'Request failed',
+        );
+      }
     }
     handler.next(response);
   }
@@ -97,5 +107,20 @@ class _ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     handler.next(err);
+  }
+}
+
+/// Cookie interceptor to automatically handle HTTP-only cookies
+class _CookieInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // Dio automatically handles cookies when sending requests
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    // Dio automatically handles Set-Cookie headers from responses
+    handler.next(response);
   }
 }

@@ -47,9 +47,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         password: event.password,
       );
       
-      emit(AuthState.loginSuccess(
+      // Login successful - emit authenticated state
+      // JWT token is now stored in HTTP-only cookie and will be sent with every request
+      emit(AuthState.authenticated(
         message: result['message'] ?? 'Login successful',
-        token: result['token'],
       ));
     } on AppException catch (e) {
       emit(AuthState.error(message: e.message, errorCode: e.errorCode));

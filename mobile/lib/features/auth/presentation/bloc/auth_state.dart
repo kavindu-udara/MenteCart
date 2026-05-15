@@ -9,15 +9,13 @@ sealed class AuthState {
   /// Loading state
   const factory AuthState.loading() = AuthLoading;
 
+  /// User authenticated state (logged in)
+  const factory AuthState.authenticated({required String message}) =
+      AuthAuthenticated;
+
   /// Signup success state
   const factory AuthState.signupSuccess({required String message}) =
       AuthSignupSuccess;
-
-  /// Login success state
-  const factory AuthState.loginSuccess({
-    required String message,
-    String? token,
-  }) = AuthLoginSuccess;
 
   /// Error state
   const factory AuthState.error({
@@ -34,17 +32,16 @@ class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
+class AuthAuthenticated extends AuthState {
+  final String message;
+
+  const AuthAuthenticated({required this.message});
+}
+
 class AuthSignupSuccess extends AuthState {
   final String message;
 
   const AuthSignupSuccess({required this.message});
-}
-
-class AuthLoginSuccess extends AuthState {
-  final String message;
-  final String? token;
-
-  const AuthLoginSuccess({required this.message, this.token});
 }
 
 class AuthError extends AuthState {

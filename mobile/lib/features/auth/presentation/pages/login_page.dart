@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import '../pages/signup_page.dart';
 import '../../../../core/utils/validation_utils.dart';
+import '../.././../home/presentation/pages/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -25,7 +26,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleLogin() {
-    // Validate form
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -33,7 +33,6 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    // Trigger login event
     context.read<AuthBloc>().add(
           LoginRequested(
             email: email,
@@ -51,15 +50,15 @@ class _LoginPageState extends State<LoginPage> {
       ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthLoginSuccess) {
-            // Show success message
+          if (state is AuthAuthenticated) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.message)),
             );
-            // TODO: Navigate to home page after login
-            // Navigator.of(context).pushReplacementNamed('/home');
+            // Navigate to home page after successful login
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
           } else if (state is AuthError) {
-            // Show error message
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -72,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
           builder: (context, state) {
             final isLoading = state is AuthLoading;
 
-            return SingleChildScrollView(
+            return SingleChildScrollView( 
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -177,12 +176,12 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             );
-          },
+          }, 
         ),
       ),
     );
   }
-}
+} 
