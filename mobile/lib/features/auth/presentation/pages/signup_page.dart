@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/entities/auth_user.dart';
 import '../bloc/auth_bloc.dart';
 import '../../../../core/utils/validation_utils.dart';
 
@@ -12,6 +11,8 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final TextEditingController _firstNameController = TextEditingController();
+  final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
@@ -22,6 +23,8 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -34,12 +37,16 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
     // Trigger signup event
     context.read<AuthBloc>().add(
           SignupRequested(
+            firstName: firstName,
+            lastName: lastName,
             email: email,
             password: password,
           ),
@@ -94,6 +101,42 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                         ),
                         const SizedBox(height: 40),
+                        TextFormField(
+                          controller: _firstNameController,
+                          enabled: !isLoading,
+                          decoration: InputDecoration(
+                            labelText: 'First Name',
+                            hintText: 'Enter your first name',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: const Icon(Icons.person),
+                          ),
+                          textInputAction: TextInputAction.next,
+                          validator: (value) => ValidationUtils.validateName(
+                            value,
+                            fieldName: 'First name',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _lastNameController,
+                          enabled: !isLoading,
+                          decoration: InputDecoration(
+                            labelText: 'Last Name',
+                            hintText: 'Enter your last name',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            prefixIcon: const Icon(Icons.person_outline),
+                          ),
+                          textInputAction: TextInputAction.next,
+                          validator: (value) => ValidationUtils.validateName(
+                            value,
+                            fieldName: 'Last name',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
                           enabled: !isLoading,

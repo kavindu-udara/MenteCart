@@ -8,6 +8,8 @@ class AuthRemoteDataSource {
 
   /// Signup - POST /auth/signup
   Future<Map<String, dynamic>> signup({
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
   }) async {
@@ -15,6 +17,8 @@ class AuthRemoteDataSource {
       final response = await apiClient.post(
         'auth/signup',
         data: {
+          'firstName': firstName,
+          'lastName': lastName,
           'email': email,
           'password': password,
         },

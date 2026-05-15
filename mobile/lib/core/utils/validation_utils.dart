@@ -1,4 +1,17 @@
 class ValidationUtils {
+  /// Validate a required name field
+  static String? validateName(String? value, {required String fieldName}) {
+    if (value == null || value.trim().isEmpty) {
+      return '$fieldName is required';
+    }
+
+    if (value.trim().length < 2) {
+      return '$fieldName must be at least 2 characters';
+    }
+
+    return null;
+  }
+
   /// Validate email format
   static String? validateEmail(String? email) {
     if (email == null || email.isEmpty) {

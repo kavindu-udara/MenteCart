@@ -158,11 +158,15 @@ class _LoginPageState extends State<LoginPage> {
                               onPressed: isLoading
                                   ? null
                                   : () {
+                                      final authBloc = context.read<AuthBloc>();
+
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              const SignupPage(),
+                                          builder: (_) => BlocProvider.value(
+                                            value: authBloc,
+                                            child: const SignupPage(),
+                                          ),
                                         ),
                                       );
                                     },

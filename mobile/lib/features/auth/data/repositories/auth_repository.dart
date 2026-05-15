@@ -8,11 +8,15 @@ class AuthRepository {
 
   /// Signup with email and password
   Future<Map<String, dynamic>> signup({
+    required String firstName,
+    required String lastName,
     required String email,
     required String password,
   }) async {
     try {
       final result = await remoteDataSource.signup(
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         password: password,
       );
