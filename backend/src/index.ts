@@ -28,7 +28,8 @@ await RedisService.create();
 // start cart cron job
 cartJob.start();
 
-const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || 'localhost';
+const PORT = process.env.PORT ?  parseInt(process.env.PORT) : 3000;
 
 app.get('/test', (req, res) => {
     res.send('Hello, MenteCart!');
@@ -50,6 +51,6 @@ app.use((req, res) => {
 
 app.use(errorMiddleware);
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`Server is running on port ${HOST}:${PORT}`);
 });
