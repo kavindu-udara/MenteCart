@@ -244,6 +244,132 @@ class _CartItemCardState extends State<_CartItemCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            // Actions: Edit slot / Delete
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    final selectedDate = widget.item.selectedDate;
+                    final dateStr = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+
+                    ServiceModel service;
+                    try {
+                      service = await ServicesRepository(apiClient: ApiClient()).getServiceSlots(widget.item.serviceId, dateStr);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load slots: $e')));
+                      return;
+                    }
+
+                    if (service.slots.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('No slots available for the selected date.')),
+                      );
+                      return;
+                    }
+
+                    // show bottom sheet with the cart item's selected date slots
+                    String? selectedStart;
+                    String? selectedEnd;
+                    await showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (ctx) {
+                        return SafeArea(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                            ),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      'Select a slot for ${DateFormat('MMM dd, yyyy').format(selectedDate)}',
+                                      style: Theme.of(ctx).textTheme.titleMedium,
+                                    ),
+                                  ),
+                                  Flexible(
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      children: service.slots.map((slot) {
+                                        final enabled = slot.isAvailable && slot.remainingCapacity > 0;
+                                        return ListTile(
+                                          title: Text('${slot.startTime} - ${slot.endTime}'),
+                                          subtitle: Text(enabled ? 'Available (${slot.remainingCapacity} left)' : 'Unavailable'),
+                                          enabled: enabled,
+                                          onTap: enabled
+                                              ? () {
+                                                  selectedStart = slot.startTime;
+                                                  selectedEnd = slot.endTime;
+                                                  Navigator.of(ctx).pop();
+                                                }
+                                              : null,
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+
+                    if (selectedStart == null || selectedEnd == null) return;
+
+                    try {
+                      await _cartRepo.updateItemSlot(
+                        itemId: widget.item.id,
+                        serviceId: widget.item.serviceId,
+                        selectedDate: dateStr,
+                        timeSlotStart: selectedStart!,
+                        timeSlotEnd: selectedEnd!,
+                      );
+                      context.read<CartBloc>().add(const CartRequested());
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slot updated')));
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update slot: $e')));
+                    }
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit Slot'),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Remove item'),
+                        content: const Text('Are you sure you want to remove this item from the cart?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Remove')),
+                        ],
+                      ),
+                    );
+                    if (ok != true) return;
+
+                    try {
+                      await _cartRepo.removeItem(widget.item.id);
+                      context.read<CartBloc>().add(const CartRequested());
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item removed')));
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to remove item: $e')));
+                    }
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             // Quantity control buttons
             Row(

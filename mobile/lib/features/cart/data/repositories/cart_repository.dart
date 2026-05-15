@@ -51,4 +51,23 @@ class CartRepository {
       rethrow;
     }
   }
+
+  Future<void> updateItemSlot({
+    required String itemId,
+    required String serviceId,
+    required String selectedDate,
+    required String timeSlotStart,
+    required String timeSlotEnd,
+  }) async {
+    try {
+      await _apiClient.patch('cart/items/$itemId', data: {
+        'serviceId': serviceId,
+        'selectedDate': selectedDate,
+        'timeSlotStart': timeSlotStart,
+        'timeSlotEnd': timeSlotEnd,
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
