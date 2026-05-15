@@ -12,6 +12,7 @@ class ServiceModel {
   final int capacityPerSlot;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<SlotModel> slots;
 
   const ServiceModel({
     required this.id,
@@ -24,6 +25,7 @@ class ServiceModel {
     required this.capacityPerSlot,
     required this.createdAt,
     required this.updatedAt,
+    required this.slots,
   });
 
   factory ServiceModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,10 @@ class ServiceModel {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : DateTime.now(),
+        slots: (json['slots'] as List?)
+            ?.map((s) => SlotModel.fromJson(s as Map<String, dynamic>))
+            .toList() ??
+            [],
     );
   }
 
@@ -60,6 +66,30 @@ class ServiceModel {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+  }
+}
+
+@immutable
+class SlotModel {
+  final String startTime;
+  final String endTime;
+  final bool isAvailable;
+  final int remainingCapacity;
+
+  const SlotModel({
+    required this.startTime,
+    required this.endTime,
+    required this.isAvailable,
+    required this.remainingCapacity,
+  });
+
+  factory SlotModel.fromJson(Map<String, dynamic> json) {
+    return SlotModel(
+      startTime: json['startTime'] as String? ?? '',
+      endTime: json['endTime'] as String? ?? '',
+      isAvailable: json['isAvailable'] as bool? ?? false,
+      remainingCapacity: json['remainingCapacity'] as int? ?? 0,
+    );
   }
 }
 

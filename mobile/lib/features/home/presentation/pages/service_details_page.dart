@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../shared/services/api_client.dart';
 import '../../data/repositories/services_repository.dart';
+import '../../data/models/service_model.dart';
 import '../bloc/service_details_bloc.dart';
+import '../../../cart/data/repositories/cart_repository.dart';
+import '../bloc/home_navigation_bloc.dart';
 
 class ServiceDetailsPage extends StatelessWidget {
   final String serviceId;
@@ -19,6 +22,13 @@ class ServiceDetailsPage extends StatelessWidget {
       child: const _ServiceDetailsView(),
     );
   }
+}
+
+class SlotSelectionResult {
+  final SlotModel slot;
+  final String date;
+
+  const SlotSelectionResult({required this.slot, required this.date});
 }
 
 class _ServiceDetailsView extends StatelessWidget {
@@ -112,12 +122,134 @@ class _ServiceDetailsView extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Booking flow is coming soon.'),
-                            ),
+                        onPressed: () async {
+                          // Date picker: today .. +3 months
+                          final today = DateTime.now();
+                          final lastDate = DateTime(today.year, today.month + 3, today.day);
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: today,
+                            firstDate: DateTime(today.year, today.month, today.day),
+                            lastDate: lastDate,
                           );
+
+                          if (picked == null) return;
+
+                          // format YYYY-MM-DD
+                          final selectedDate = '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+
+                          final servicesRepo = ServicesRepository(apiClient: ApiClient());
+
+                          // show loading
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const Center(child: CircularProgressIndicator()),
+                          );
+
+                          try {
+                            final serviceWithSlots = await servicesRepo.getServiceSlots(service.id, selectedDate);
+                            Navigator.of(context).pop(); // remove loading
+
+                            final availableSlots = serviceWithSlots.slots.where((s) => s.isAvailable).toList();
+
+                            if (availableSlots.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('No available slots for selected date.')),
+                              );
+                              return;
+                            }
+
+                            // show slots selection bottom sheet
+                            final selected = await showModalBottomSheet<SlotSelectionResult?>(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (ctx) {
+                                SlotModel? chosen;
+                                return StatefulBuilder(
+                                  builder: (context, setState) {
+                                    return Padding(
+                                      padding: MediaQuery.of(context).viewInsets,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Text('Select a time slot on $selectedDate', style: Theme.of(context).textTheme.titleMedium),
+                                          ),
+                                          ...availableSlots.map((slot) {
+                                            return RadioListTile<SlotModel>(
+                                              title: Text('${slot.startTime} - ${slot.endTime}'),
+                                              subtitle: Text('Remaining: ${slot.remainingCapacity}'),
+                                              value: slot,
+                                              groupValue: chosen,
+                                              onChanged: (v) => setState(() => chosen = v),
+                                            );
+                                          }).toList(),
+                                          Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: FilledButton.tonal(
+                                                    onPressed: () => Navigator.of(context).pop(null),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: FilledButton(
+                                                    onPressed: chosen == null
+                                                        ? null
+                                                        : () => Navigator.of(context).pop(SlotSelectionResult(slot: chosen!, date: selectedDate)),
+                                                    child: const Text('Confirm'),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+
+                            if (selected == null) return;
+
+                            // add to cart
+                            final cartRepo = CartRepository(apiClient: ApiClient());
+                            // show loading
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => const Center(child: CircularProgressIndicator()),
+                            );
+
+                            try {
+                              await cartRepo.addItem(
+                                serviceId: service.id,
+                                selectedDate: selected.date,
+                                timeSlotStart: selected.slot.startTime,
+                                timeSlotEnd: selected.slot.endTime,
+                              );
+                              Navigator.of(context).pop(); // remove loading
+
+                              // navigate to cart tab
+                              try {
+                                context.read<HomeNavigationBloc>().add(HomeTabSelected(1));
+                              } catch (_) {}
+
+                              Navigator.of(context).popUntil((r) => r.isFirst);
+                            } catch (e) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                            }
+                          } catch (e) {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                          }
                         },
                         child: const Text('Book Now'),
                       ),

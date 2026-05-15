@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cookie_jar/cookie_jar.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import '../../core/errors/exceptions.dart';
 
 class ApiClient {
+  static final CookieJar _cookieJar = CookieJar();
   late final Dio _dio;
 
   ApiClient() {
@@ -21,8 +24,9 @@ class ApiClient {
     // Add error interceptor
     _dio.interceptors.add(_ErrorInterceptor());
     
-    // Add cookie interceptor to automatically send cookies with every request
-    _dio.interceptors.add(_CookieInterceptor());
+    // Add a shared CookieManager so the HTTP-only JWT cookie is reused across
+    // all ApiClient instances created in different screens/features.
+    _dio.interceptors.add(CookieManager(_cookieJar));
   }
 
   /// POST request
@@ -110,17 +114,4 @@ class _ErrorInterceptor extends Interceptor {
   }
 }
 
-/// Cookie interceptor to automatically handle HTTP-only cookies
-class _CookieInterceptor extends Interceptor {
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // Dio automatically handles cookies when sending requests
-    handler.next(options);
-  }
-
-  @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
-    // Dio automatically handles Set-Cookie headers from responses
-    handler.next(response);
-  }
-}
+// CookieManager from dio_cookie_manager is used instead of a custom cookie interceptor.

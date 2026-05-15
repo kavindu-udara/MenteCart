@@ -23,4 +23,13 @@ class ServicesRepository {
       rethrow;
     }
   }
+
+  Future<ServiceModel> getServiceSlots(String serviceId, String date) async {
+    try {
+      final response = await _apiClient.get('services/$serviceId?date=$date');
+      return ServiceDetailsResponse.fromJson(response).service;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
