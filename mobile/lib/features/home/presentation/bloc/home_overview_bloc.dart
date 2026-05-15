@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 part 'home_overview_event.dart';
@@ -19,28 +18,6 @@ class HomeOverviewBloc extends Bloc<HomeOverviewEvent, HomeOverviewState> {
 
     await Future<void>.delayed(const Duration(milliseconds: 250));
 
-    emit(
-      const HomeOverviewState.loaded(
-        welcomeMessage: 'Welcome back to MenteCart',
-        subtitle: 'Manage your shopping and bookings from one place.',
-        highlights: [
-          HomeHighlight(
-            title: '3',
-            label: 'Active carts',
-            icon: Icons.shopping_cart_outlined,
-          ),
-          HomeHighlight(
-            title: '12',
-            label: 'Saved bookings',
-            icon: Icons.book_outlined,
-          ),
-          HomeHighlight(
-            title: '98%',
-            label: 'Completion rate',
-            icon: Icons.verified_outlined,
-          ),
-        ],
-      ),
-    );
+    emit(const HomeOverviewState.loaded());
   }
 }

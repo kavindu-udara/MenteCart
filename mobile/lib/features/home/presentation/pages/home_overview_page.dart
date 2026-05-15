@@ -25,184 +25,74 @@ class HomeOverviewPage extends StatelessWidget {
               title: 'Nothing to show yet',
               message: message,
             ),
-          HomeOverviewLoaded(
-            :final welcomeMessage,
-            :final subtitle,
-            :final highlights,
-          ) =>
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _HeroCard(
-                      title: welcomeMessage,
-                      subtitle: subtitle,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Highlights',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 12),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: highlights.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 1.25,
-                      ),
-                      itemBuilder: (context, index) {
-                        final highlight = highlights[index];
-
-                        return Card(
-                          elevation: 0,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Icon(highlight.icon),
-                                const Spacer(),
-                                Text(
-                                  highlight.title,
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(highlight.label),
-                              ],
-                            ),
+          HomeOverviewLoaded() => SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: BlocBuilder<ServicesBloc, ServicesState>(
+                builder: (context, state) {
+                  return switch (state) {
+                    ServicesInitial() || ServicesLoading() =>
+                      _buildLoadingState(),
+                    ServicesError(:final message) => SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline,
+                                  size: 40,
+                                  color: Theme.of(context).colorScheme.error),
+                              const SizedBox(height: 8),
+                              Text(
+                                message.isNotEmpty
+                                    ? message
+                                    : 'Failed to load services',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Available Services',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 12),
-                    BlocBuilder<ServicesBloc, ServicesState>(
-                      builder: (context, state) {
-                        return switch (state) {
-                          ServicesInitial() ||
-                          ServicesLoading() =>
-                            _buildLoadingGrid(),
-                          ServicesError(:final message) => SizedBox(
-                              height: 200,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.error_outline,
-                                        size: 40,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .error),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                        message.isNotEmpty
-                                          ? message
-                                          : 'Failed to load services',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ],
-                                ),
+                        ),
+                      ),
+                    ServicesEmpty(:final message) => SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.inbox_outlined,
+                                  size: 40,
+                                  color:
+                                      Theme.of(context).colorScheme.outline),
+                              const SizedBox(height: 8),
+                              Text(
+                                message,
+                                style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                            ),
-                          ServicesEmpty(:final message) => SizedBox(
-                              height: 200,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.inbox_outlined,
-                                        size: 40,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      message,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ServicesLoaded(:final services) => GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: services.length,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 0.75,
-                              ),
-                              itemBuilder: (context, index) {
-                                final service = services[index];
-                                return _ServiceCard(service: service);
-                              },
-                            ),
-                        };
-                      },
-                    ),
-                  ],
-                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ServicesLoaded(:final services) => GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: services.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemBuilder: (context, index) {
+                          final service = services[index];
+                          return _ServiceCard(service: service);
+                        },
+                      ),
+                  };
+                },
               ),
+            ),
         };
       },
-    );
-  }
-}
-
-class _HeroCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _HeroCard({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.storefront_outlined, size: 32),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(subtitle),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -219,12 +109,10 @@ class _ServiceCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          // Handle service tap
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image with loading placeholder
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(8)),
@@ -368,68 +256,11 @@ class _StateMessage extends StatelessWidget {
   }
 }
 
-Widget _buildLoadingGrid() {
-  return GridView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: 4,
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 0.75,
+Widget _buildLoadingState() {
+  return const SizedBox(
+    height: 200,
+    child: Center(
+      child: CircularProgressIndicator(),
     ),
-    itemBuilder: (context, index) {
-      return Card(
-        elevation: 0,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Shimmer placeholder for image
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Shimmer placeholder for title
-              Container(
-                height: 12,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 6),
-              // Shimmer placeholder for description
-              Container(
-                height: 10,
-                width: 80,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const Spacer(),
-              // Shimmer placeholder for price
-              Container(
-                height: 12,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
   );
 }

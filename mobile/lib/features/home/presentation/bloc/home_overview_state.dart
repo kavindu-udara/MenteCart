@@ -5,11 +5,7 @@ sealed class HomeOverviewState {
 
   const factory HomeOverviewState.initial() = HomeOverviewInitial;
   const factory HomeOverviewState.loading() = HomeOverviewLoading;
-  const factory HomeOverviewState.loaded({
-    required String welcomeMessage,
-    required String subtitle,
-    required List<HomeHighlight> highlights,
-  }) = HomeOverviewLoaded;
+  const factory HomeOverviewState.loaded() = HomeOverviewLoaded;
   const factory HomeOverviewState.empty({required String message}) =
       HomeOverviewEmpty;
   const factory HomeOverviewState.error({required String message}) =
@@ -25,15 +21,7 @@ final class HomeOverviewLoading extends HomeOverviewState {
 }
 
 final class HomeOverviewLoaded extends HomeOverviewState {
-  final String welcomeMessage;
-  final String subtitle;
-  final List<HomeHighlight> highlights;
-
-  const HomeOverviewLoaded({
-    required this.welcomeMessage,
-    required this.subtitle,
-    required this.highlights,
-  });
+  const HomeOverviewLoaded();
 }
 
 final class HomeOverviewEmpty extends HomeOverviewState {
@@ -46,16 +34,4 @@ final class HomeOverviewError extends HomeOverviewState {
   final String message;
 
   const HomeOverviewError({required this.message});
-}
-
-final class HomeHighlight {
-  final String title;
-  final String label;
-  final IconData icon;
-
-  const HomeHighlight({
-    required this.title,
-    required this.label,
-    required this.icon,
-  });
 }
