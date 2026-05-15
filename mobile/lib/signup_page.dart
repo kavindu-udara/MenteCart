@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/auth_service.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -14,6 +15,7 @@ class _SignupPageState extends State<SignupPage> {
       TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -23,14 +25,22 @@ class _SignupPageState extends State<SignupPage> {
     super.dispose();
   }
 
-  void _handleSignup() {
-    String email = _emailController.text;
+  void _handleSignup() async {
+    String email = _emailController.text.trim();
     String password = _passwordController.text;
     String confirmPassword = _confirmPasswordController.text;
 
+    // Validation
     if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+
+    if (!email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email')),
       );
       return;
     }
@@ -49,8 +59,41 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
 
-    // TODO: Implement signup logic here
-    print('Sign up with email: $email');
+    // Set loading state
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Call signup API
+    final response = await AuthService.signup(
+      email: email,
+      password: password,
+    );
+
+    // Set loading state to false
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (!mounted) return;
+
+    if (response['success']) {
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'] ?? 'Signup successful')),
+      );
+
+      // Navigate to login page
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } else {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response['message'] ?? 'Signup failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -143,11 +186,19 @@ class _SignupPageState extends State<SignupPage> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _handleSignup,
-                    child: const Text(
-                      'Sign Up',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    onPressed: _isLoading ? null : _handleSignup,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Sign Up',
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
