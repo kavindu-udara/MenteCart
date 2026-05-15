@@ -20,13 +20,15 @@ export class AuthController {
         );
       }
 
-      const { email, password } = result.data;
+      const { firstName, lastName, email, password } = result.data;
 
-      const newUser = await authService.register(email, password, "user");
+      const newUser = await authService.register(firstName, lastName, email, password, "user");
 
       res.status(201).json({
         message: "User registered successfully",
         user: {
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
           email: newUser.email,
           role: newUser.role,
         },

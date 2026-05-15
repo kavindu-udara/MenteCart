@@ -1,6 +1,8 @@
 import z from "zod";
 
 export const signupSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required").max(50, "First name must be at most 50 characters long"),
+  lastName: z.string().trim().min(1, "Last name is required").max(50, "Last name must be at most 50 characters long"),
   email: z.string().trim().email("Invalid email address"),
   password: z
     .string()
