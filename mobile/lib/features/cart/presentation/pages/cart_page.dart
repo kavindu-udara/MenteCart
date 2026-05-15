@@ -8,6 +8,7 @@ import '../../data/repositories/cart_repository.dart';
 import '../../../home/data/repositories/services_repository.dart';
 import '../../../home/data/models/service_model.dart';
 import '../../../../shared/services/api_client.dart';
+import '../../../../core/errors/exceptions.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -257,7 +258,8 @@ class _CartItemCardState extends State<_CartItemCard> {
                     try {
                       service = await ServicesRepository(apiClient: ApiClient()).getServiceSlots(widget.item.serviceId, dateStr);
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load slots: $e')));
+                      final errorMsg = e is AppException ? e.message : e.toString();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
                       return;
                     }
 
@@ -335,7 +337,8 @@ class _CartItemCardState extends State<_CartItemCard> {
                       context.read<CartBloc>().add(const CartRequested());
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slot updated')));
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update slot: $e')));
+                      final errorMsg = e is AppException ? e.message : e.toString();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
                     }
                   },
                   icon: const Icon(Icons.edit),
@@ -362,7 +365,8 @@ class _CartItemCardState extends State<_CartItemCard> {
                       context.read<CartBloc>().add(const CartRequested());
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item removed')));
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to remove item: $e')));
+                      final errorMsg = e is AppException ? e.message : e.toString();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
                     }
                   },
                   icon: const Icon(Icons.delete_outline),
@@ -388,7 +392,8 @@ class _CartItemCardState extends State<_CartItemCard> {
                               // refresh cart
                               context.read<CartBloc>().add(const CartRequested());
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                              final errorMsg = e is AppException ? e.message : e.toString();
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
                             }
                           }
                         : null,
