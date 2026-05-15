@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../data/models/service_model.dart';
 import '../bloc/home_overview_bloc.dart';
 import '../bloc/services_bloc.dart';
+import 'service_details_page.dart';
 
 class HomeOverviewPage extends StatelessWidget {
   const HomeOverviewPage({super.key});
@@ -98,7 +100,7 @@ class HomeOverviewPage extends StatelessWidget {
 }
 
 class _ServiceCard extends StatelessWidget {
-  final dynamic service;
+  final ServiceModel service;
 
   const _ServiceCard({required this.service});
 
@@ -109,6 +111,11 @@ class _ServiceCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ServiceDetailsPage(serviceId: service.id),
+            ),
+          );
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

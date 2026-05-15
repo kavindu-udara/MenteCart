@@ -120,3 +120,23 @@ class ServicesResponse {
     );
   }
 }
+
+@immutable
+class ServiceDetailsResponse {
+  final ServiceModel service;
+  final String message;
+
+  const ServiceDetailsResponse({
+    required this.service,
+    required this.message,
+  });
+
+  factory ServiceDetailsResponse.fromJson(Map<String, dynamic> json) {
+    return ServiceDetailsResponse(
+      service: ServiceModel.fromJson(
+        json['service'] as Map<String, dynamic>? ?? {},
+      ),
+      message: json['message'] as String? ?? '',
+    );
+  }
+}

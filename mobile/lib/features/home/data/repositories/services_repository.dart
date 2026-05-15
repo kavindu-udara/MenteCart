@@ -14,4 +14,13 @@ class ServicesRepository {
       rethrow;
     }
   }
+
+  Future<ServiceModel> getServiceById(String serviceId) async {
+    try {
+      final response = await _apiClient.get('services/$serviceId');
+      return ServiceDetailsResponse.fromJson(response).service;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
