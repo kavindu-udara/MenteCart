@@ -72,6 +72,7 @@ export class CartController {
 
   async updateItem(req: Request, res: Response, next: NextFunction) {
     try {
+      console.log("Update cart item request body:", req.body);
       const userId = req.decoded.userId;
       const itemId = req.params.itemId;
       const { selectedDate, timeSlotStart, timeSlotEnd } = req.body;
@@ -148,6 +149,17 @@ export class CartController {
     } catch (error) {
       console.error("Remove cart item error:", error);
       next(error);
+    }
+  }
+
+  async clearCache(userId : string) {
+    try {
+      const cacheKey = `cart:${userId}`;
+      await RedisService.del(cacheKey);
+      console.log(`Cleared cart cache for user ${userId}`);
+    } catch (error) {
+      console.error("Clear cart cache error:", error);
+      throw error;
     }
   }
 

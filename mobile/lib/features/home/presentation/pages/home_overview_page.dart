@@ -1,0 +1,273 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../data/models/service_model.dart';
+import '../bloc/home_overview_bloc.dart';
+import '../bloc/services_bloc.dart';
+import 'service_details_page.dart';
+
+class HomeOverviewPage extends StatelessWidget {
+  const HomeOverviewPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<HomeOverviewBloc, HomeOverviewState>(
+      builder: (context, state) {
+        return switch (state) {
+          HomeOverviewInitial() || HomeOverviewLoading() => const Center(
+              child: CircularProgressIndicator(),
+            ),
+          HomeOverviewError(:final message) => _StateMessage(
+              icon: Icons.error_outline,
+              title: 'Home unavailable',
+              message: message,
+            ),
+          HomeOverviewEmpty(:final message) => _StateMessage(
+              icon: Icons.inbox_outlined,
+              title: 'Nothing to show yet',
+              message: message,
+            ),
+          HomeOverviewLoaded() => SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: BlocBuilder<ServicesBloc, ServicesState>(
+                builder: (context, state) {
+                  return switch (state) {
+                    ServicesInitial() || ServicesLoading() =>
+                      _buildLoadingState(),
+                    ServicesError(:final message) => SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline,
+                                  size: 40,
+                                  color: Theme.of(context).colorScheme.error),
+                              const SizedBox(height: 8),
+                              Text(
+                                message.isNotEmpty
+                                    ? message
+                                    : 'Failed to load services',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ServicesEmpty(:final message) => SizedBox(
+                        height: 200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.inbox_outlined,
+                                  size: 40,
+                                  color:
+                                      Theme.of(context).colorScheme.outline),
+                              const SizedBox(height: 8),
+                              Text(
+                                message,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ServicesLoaded(:final services) => GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: services.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemBuilder: (context, index) {
+                          final service = services[index];
+                          return _ServiceCard(service: service);
+                        },
+                      ),
+                  };
+                },
+              ),
+            ),
+        };
+      },
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final ServiceModel service;
+
+  const _ServiceCard({required this.service});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ServiceDetailsPage(serviceId: service.id),
+            ),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
+              child: Stack(
+                children: [
+                  Image.network(
+                    service.imageUrl,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 120,
+                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported_outlined),
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 120,
+                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        child: const Center(
+                          child: SizedBox(
+                            width: 30,
+                            height: 30,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      service.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      service.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '\$${service.price.toStringAsFixed(0)}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                            ),
+                            Text(
+                              '${service.duration} min',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios_outlined,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StateMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildLoadingState() {
+  return const SizedBox(
+    height: 200,
+    child: Center(
+      child: CircularProgressIndicator(),
+    ),
+  );
+}

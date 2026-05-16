@@ -1,10 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import { BookingService } from "../services/booking.service";
 import { RedisService } from "../services/redis.service";
-import { bookingCheckoutSchema } from "../lib/zodSchemas";
+import { bookingCheckoutSchema, payhereCheckoutSchema } from "../lib/zodSchemas";
 import { AppError, ErrorCode } from "../utils/appError";
+import { CartController } from "./cart.controller";
 
 const bookingService = new BookingService();
+const cartController = new CartController();
 
 export class BookingController {
   async getBookings(req: Request, res: Response, next: NextFunction) {
@@ -56,13 +58,16 @@ export class BookingController {
 
       const { paymentMethod } = result.data;
 
-      await bookingService.checkout(userId, paymentMethod);
+      const booking = await bookingService.checkout(userId, paymentMethod);
 
       // invalidate bookings cache
       const cacheKey = `bookings:${userId}`;
       await RedisService.del(cacheKey);
 
-      res.status(200).json({ message: "Checkout successful" });
+      // clear cart cache since booking is done
+      await cartController.clearCache(userId);
+
+      res.status(200).json({booking, message: "Checkout successful" });
     } catch (error) {
       console.error("Checkout error:", error);
       next(error);

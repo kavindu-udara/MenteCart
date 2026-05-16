@@ -20,13 +20,21 @@ export class AuthController {
         );
       }
 
-      const { email, password } = result.data;
+      const { firstName, lastName, email, password } = result.data;
 
-      const newUser = await authService.register(email, password, "user");
+      const newUser = await authService.register(
+        firstName,
+        lastName,
+        email,
+        password,
+        "user",
+      );
 
       res.status(201).json({
         message: "User registered successfully",
         user: {
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
           email: newUser.email,
           role: newUser.role,
         },
@@ -78,12 +86,15 @@ export class AuthController {
         return res.status(404).json({ message: "User not found" });
       }
 
-      res
-        .status(200)
-        .json({
-          user: { email: user.email, role: user.role },
-          message: "User retrieved successfully",
-        });
+      res.status(200).json({
+        user: {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+        },
+        message: "User retrieved successfully",
+      });
     } catch (error) {
       console.error("Me error:", error);
       next(error);

@@ -14,6 +14,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.12.4",
   "devDependencies": {
+    "@types": "link:@types",
     "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cron": "^2.4.3",
@@ -21,6 +22,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.97",
     "@types/redis": "^4.0.11",
+    "md5": "^2.3.0",
     "nodemon": "^3.1.14",
     "tsx": "^4.21.0"
   },

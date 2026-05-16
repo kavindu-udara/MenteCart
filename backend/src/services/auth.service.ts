@@ -10,6 +10,8 @@ export class AuthService {
   private JWT_EXPIRES_IN = "24h" as jwt.SignOptions["expiresIn"];
 
   async register(
+    firstName: string,
+    lastName: string,
     email: string,
     password: string,
     role: "admin" | "user",
@@ -24,7 +26,7 @@ export class AuthService {
     const hashedPassword = await this.hashPassword(password);
 
     // create new user
-    const newUser = new User({ email, password: hashedPassword, role });
+    const newUser = new User({firstName, lastName, email, password: hashedPassword, role });
     await newUser.save();
 
     return newUser;
