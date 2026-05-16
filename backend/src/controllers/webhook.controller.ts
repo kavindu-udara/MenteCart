@@ -20,8 +20,7 @@ export class WebhookController {
         md5sig: params.get('md5sig')!
       };
 
-      // 1️⃣ Verify signature
-      const isValid = payhereService.verifyPayHereSignature(
+      const isValid = await payhereService.verifyPayHereSignature(
         payload, 
         process.env.PAYHERE_MERCHANT_SECRET!
       );
@@ -30,7 +29,6 @@ export class WebhookController {
         return res.status(400).send('Invalid signature');
       }
 
-      // 2️⃣ Process idempotently
       const bookingService = new BookingService();
       await bookingService.processPayHereWebhook(payload);
 

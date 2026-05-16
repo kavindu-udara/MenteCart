@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { BookingService } from "../services/booking.service";
 import { RedisService } from "../services/redis.service";
-import { bookingCheckoutSchema, payhereCheckoutSchema } from "../lib/zodSchemas";
+import { bookingCheckoutSchema } from "../lib/zodSchemas";
 import { AppError, ErrorCode } from "../utils/appError";
 import { CartController } from "./cart.controller";
 
