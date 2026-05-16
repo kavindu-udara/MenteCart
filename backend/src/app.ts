@@ -1,6 +1,5 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import pino from 'pino-http';
 
 import authRoutes from './routes/auth.route';
@@ -10,34 +9,21 @@ import bookingRoutes from './routes/booking.route';
 import webhookRoutes from './routes/webhook.routes';
 
 import { errorMiddleware } from './middlewares/error.middleware';
-import { RedisService } from './services/redis.service';
-import { DB } from './lib/db';
-import { cartJob } from './lib/cron';
-
-dotenv.config();
-
-// connect to database
-await DB.connect();
 
 const app = express();
 
 // pino logger
 app.use(pino());
 
-app.use(webhookRoutes); // must be BEFORE express.json() to handle raw body for PayHere webhooks
+app.use(webhookRoutes); 
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// redis
-await RedisService.create();
-
-// start cart cron job
-cartJob.start();
-
-const HOST = process.env.HOST || 'localhost';
-const PORT = process.env.PORT ?  parseInt(process.env.PORT) : 3000;
+app.get('/', (req, res) => {
+    res.json({ message: 'Hello World' });
+});
 
 app.get('/test', (req, res) => {
     res.send('Hello, MenteCart!');
@@ -59,6 +45,4 @@ app.use((req, res) => {
 
 app.use(errorMiddleware);
 
-app.listen(PORT, HOST, () => {
-    console.log(`Server is running on port ${HOST}:${PORT}`);
-});
+export default app;

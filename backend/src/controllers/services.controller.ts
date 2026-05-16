@@ -51,7 +51,7 @@ export class ServicesController {
 
   async getServiceById(req: Request, res: Response, next: NextFunction) {
     try {
-      let cacheKey;
+      let cacheKey : string;
       // check cache first
       cacheKey = `service:${JSON.stringify(req.query)}`;
 
