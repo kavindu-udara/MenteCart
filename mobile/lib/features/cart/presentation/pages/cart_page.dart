@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../bloc/cart_bloc.dart';
+import '../../../bookings/presentation/bloc/bookings_bloc.dart';
 import '../../../../shared/navigation/route_observer.dart';
 import '../../data/repositories/cart_repository.dart';
 import '../../../home/data/repositories/services_repository.dart';
@@ -129,6 +130,7 @@ class _CartPageState extends State<CartPage> with RouteAware {
   Future<void> _checkout(String method) async {
     final api = ApiClient();
     final cartBloc = context.read<CartBloc>();
+    final bookingsBloc = context.read<BookingsBloc>();
 
     setState(() => _isCheckingOut = true);
     showDialog<void>(
@@ -162,7 +164,10 @@ class _CartPageState extends State<CartPage> with RouteAware {
                   paymentUrl: url,
                   params: params,
                   bookingId: bookingId,
-                  onBookingSettled: () => cartBloc.add(const CartRequested()),
+                    onBookingSettled: () {
+                      cartBloc.add(const CartRequested());
+                      bookingsBloc.add(const BookingsRequested());
+                    },
                 ),
           ));
         }
@@ -171,6 +176,7 @@ class _CartPageState extends State<CartPage> with RouteAware {
 
       // For cash or pay_on_arrival, show message and refresh cart
       cartBloc.add(const CartRequested());
+        bookingsBloc.add(const BookingsRequested());
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Checkout successful')));
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {

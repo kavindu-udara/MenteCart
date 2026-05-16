@@ -61,6 +61,9 @@ class HomePage extends StatelessWidget {
           if (index == 1) {
             // When Cart tab is selected, refresh cart from backend
             context.read<CartBloc>().add(const CartRequested());
+          } else if (index == 2) {
+            // When Bookings tab is selected, refresh bookings from backend
+            context.read<BookingsBloc>().add(const BookingsRequested());
           }
         },
         child: BlocBuilder<HomeNavigationBloc, HomeNavigationState>(
