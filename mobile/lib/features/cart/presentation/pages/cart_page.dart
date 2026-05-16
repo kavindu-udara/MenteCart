@@ -9,6 +9,7 @@ import '../../../home/data/repositories/services_repository.dart';
 import '../../../home/data/models/service_model.dart';
 import '../../../../shared/services/api_client.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../checkout/presentation/pages/payhere_webview_page.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -43,6 +44,130 @@ class _CartPageState extends State<CartPage> with RouteAware {
   void didPopNext() {
     // user returned to this route -> refresh cart
     context.read<CartBloc>().add(const CartRequested());
+  }
+
+  Future<void> _showCheckoutOptions(BuildContext context, double totalAmount) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        String? selected;
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.5,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          'Select payment method - \$${totalAmount.toStringAsFixed(2)}',
+                          style: Theme.of(ctx).textTheme.titleMedium,
+                        ),
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('PayHere (Online)'),
+                        value: 'payhere',
+                        groupValue: selected,
+                        onChanged: (value) {
+                          setSheetState(() => selected = value);
+                        },
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Cash'),
+                        value: 'cash',
+                        groupValue: selected,
+                        onChanged: (value) {
+                          setSheetState(() => selected = value);
+                        },
+                      ),
+                      RadioListTile<String>(
+                        title: const Text('Pay on arrival'),
+                        value: 'pay_on_arrival',
+                        groupValue: selected,
+                        onChanged: (value) {
+                          setSheetState(() => selected = value);
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: selected == null
+                                ? null
+                                : () async {
+                                    Navigator.of(ctx).pop();
+                                    await _checkout(selected!);
+                                  },
+                            child: const Text('Confirm & Pay'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _checkout(String method) async {
+    final api = ApiClient();
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final res = await api.post('bookings/checkout', data: {'paymentMethod': method});
+
+      // close loading
+      Navigator.of(context).pop();
+
+      final booking = res['booking'] as Map<String, dynamic>?;
+
+      if (method == 'payhere' && booking != null && booking['paymentInstructions'] != null) {
+        final instr = booking['paymentInstructions'] as Map<String, dynamic>;
+        final url = instr['url'] as String? ?? '';
+        final params = (instr['params'] as Map?)?.map((k, v) => MapEntry(k.toString(), v.toString())) ?? <String, String>{};
+        final bookingId = booking['_id'] as String? ?? booking['id'] as String? ?? '';
+
+        if (url.isNotEmpty) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) =>
+                // ignore: prefer_const_constructors
+                PayHereWebViewPage(paymentUrl: url, params: params, bookingId: bookingId),
+          ));
+        }
+        return;
+      }
+
+      // For cash or pay_on_arrival, show message and refresh cart
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Checkout successful')));
+      // Refresh cart and navigate to home
+      context.read<CartBloc>().add(const CartRequested());
+      Navigator.of(context).pushReplacementNamed('/home');
+    } catch (e) {
+      Navigator.of(context).pop();
+      final err = e is AppException ? e.message : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    }
   }
 
   @override
@@ -113,11 +238,9 @@ class _CartPageState extends State<CartPage> with RouteAware {
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Implement booking logic
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Booking logic coming soon')),
-                        );
+                      onPressed: () async {
+                        // Show checkout options only when there are items
+                        await _showCheckoutOptions(context, cart.totalAmount);
                       },
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
