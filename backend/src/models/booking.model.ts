@@ -13,6 +13,7 @@ export interface IBooking {
     selectedDate: Date;
     timeSlotStart: string;
     timeSlotEnd: string;
+    quantity: number;
     priceAtBooking: number;
   }[];
   statusHistory: {
@@ -58,6 +59,7 @@ const bookingSchema = new mongoose.Schema<IBooking>(
         selectedDate: { type: Date, required: true },
         timeSlotStart: { type: String, required: true },
         timeSlotEnd: { type: String, required: true },
+        quantity: { type: Number, required: true, min: 1, default: 1 },
         priceAtBooking: { type: Number, required: true, min: 0 },
       },
     ],

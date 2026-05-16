@@ -35,8 +35,9 @@ export const cartJob = new CronJob("*/5 * * * *", async () => {
               date: i.selectedDate,
               timeSlotStart: i.timeSlotStart,
               timeSlotEnd: i.timeSlotEnd,
+              bookedCount: { $gte: i.quantity },
             },
-            update: { $inc: { bookedCount: -1 } },
+            update: { $inc: { bookedCount: -i.quantity } },
           },
         })),
       );

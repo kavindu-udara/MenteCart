@@ -51,8 +51,20 @@ export class ServicesController {
 
   async getServiceById(req: Request, res: Response, next: NextFunction) {
     try {
+      let cacheKey;
       // check cache first
-      const cacheKey = `service:${JSON.stringify(req.query)}`;
+      cacheKey = `service:${JSON.stringify(req.query)}`;
+
+      const { id } = req.params;
+      const { date } = req.query;
+
+      // if date is provided, we need to include it in the cache key because it affects the generated slots
+      if (date && typeof date === "string") {
+        cacheKey = `service:${id}:date:${date}`;
+      } else {
+        cacheKey = `service:${id}`;
+      }
+
       const cachedData = await RedisService.get(cacheKey);
 
       // if cache hit, return cached data
@@ -61,30 +73,32 @@ export class ServicesController {
         return res.status(200).json(JSON.parse(cachedData));
       }
 
-      const { id } = req.params;
-      const {date} = req.query;
-
       const service = await servicesService.getServiceById(id as string);
 
-      let slots : SlotResponse[] = [];
+      let slots: SlotResponse[] = [];
       if (date && typeof date === "string") {
         slots = await servicesService.generateSlotsForDate(service, date);
       }
 
-       // cache the result for 10 minutes
-       await RedisService.set(
+      // cache the result for 10 minutes
+      await RedisService.set(
         cacheKey,
-        JSON.stringify({ service: { ...service.toObject(), slots }, message: "Service retrieved successfully" }),
+        JSON.stringify({
+          service: { ...service.toObject(), slots },
+          message: "Service retrieved successfully",
+        }),
         600,
       );
 
       res
         .status(200)
-        .json({ service: { ...service.toObject(), slots }, message: "Service retrieved successfully" });
+        .json({
+          service: { ...service.toObject(), slots },
+          message: "Service retrieved successfully",
+        });
     } catch (error) {
       console.error("Get service by id error:", error);
       next(error);
     }
   }
-
 }

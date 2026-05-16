@@ -92,6 +92,7 @@ export class BookingService {
           serviceId: item.serviceId,
           date: new Date(item.selectedDate),
           timeSlotStart: item.timeSlotStart,
+          timeSlotEnd: item.timeSlotEnd,
         });
 
         if (!capacityDoc || capacityDoc.bookedCount > service.capacityPerSlot) {
@@ -113,6 +114,7 @@ export class BookingService {
         selectedDate: i.selectedDate,
         timeSlotStart: i.timeSlotStart,
         timeSlotEnd: i.timeSlotEnd,
+        quantity: i.quantity,
         priceAtBooking: i.priceAtAdd,
       }));
 
@@ -254,9 +256,10 @@ export class BookingService {
           serviceId: item.serviceId,
           date: item.selectedDate,
           timeSlotStart: item.timeSlotStart,
-          bookedCount: { $gt: 0 }, // Safety guard
+          timeSlotEnd: item.timeSlotEnd,
+          bookedCount: { $gte: item.quantity }, // Safety guard
         },
-        update: { $inc: { bookedCount: -1 } },
+        update: { $inc: { bookedCount: -item.quantity } },
       },
     }));
 
@@ -318,9 +321,10 @@ export class BookingService {
               serviceId: item.serviceId,
               date: new Date(item.selectedDate).setHours(0, 0, 0, 0), // normalize
               timeSlotStart: item.timeSlotStart,
-              bookedCount: { $gt: 0 },
+              timeSlotEnd: item.timeSlotEnd,
+              bookedCount: { $gte: item.quantity },
             },
-            update: { $inc: { bookedCount: -1 } },
+            update: { $inc: { bookedCount: -item.quantity } },
           },
         }));
 
@@ -367,8 +371,10 @@ export class BookingService {
           serviceId: item.serviceId,
           date: item.selectedDate,
           timeSlotStart: item.timeSlotStart,
+          timeSlotEnd: item.timeSlotEnd,
+          bookedCount: { $gte: item.quantity },
         },
-        update: { $inc: { bookedCount: -1 } },
+        update: { $inc: { bookedCount: -item.quantity } },
       },
     }));
     await SlotCapacity.bulkWrite(bulkOps);

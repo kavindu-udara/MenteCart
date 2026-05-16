@@ -75,7 +75,9 @@ export class CartController {
       console.log("Update cart item request body:", req.body);
       const userId = req.decoded.userId;
       const itemId = req.params.itemId;
-      const { selectedDate, timeSlotStart, timeSlotEnd } = req.body;
+      const { selectedDate, timeSlotStart, timeSlotEnd, quantity } = req.body;
+      const parsedQuantity =
+        quantity === undefined ? undefined : Number(quantity);
 
       if (!selectedDate || !timeSlotStart || !timeSlotEnd) {
         return next(
@@ -98,12 +100,26 @@ export class CartController {
         );
       }
 
+      if (
+        parsedQuantity !== undefined &&
+        (!Number.isInteger(parsedQuantity) || parsedQuantity < 1)
+      ) {
+        return next(
+          new AppError(
+            400,
+            ErrorCode.VALIDATION_ERROR,
+            "quantity must be a positive integer",
+          ),
+        );
+      }
+
       const cart = await cartService.updateItem(
         userId,
         itemId,
         selectedDate,
         timeSlotStart,
         timeSlotEnd,
+        parsedQuantity,
       );
 
       // invalidate cart cache

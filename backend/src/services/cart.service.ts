@@ -36,24 +36,14 @@ export class CartService {
         );
 
       // Check capacity for the slot
-      const capacityDoc = await SlotCapacity.findOneAndUpdate(
-        {
-          serviceId: service._id,
-          date: new Date(selectedDate),
-          timeSlotStart: timeSlotStart,
-          timeSlotEnd: timeSlotEnd,
-        },
-        { $inc: { bookedCount: 1 } },
-        { upsert: true, new: true },
+      await this.reserveCapacity(
+        service._id,
+        selectedDate,
+        timeSlotStart,
+        timeSlotEnd,
+        1,
+        service.capacityPerSlot,
       );
-
-      if (!capacityDoc) {
-        throw new AppError(
-          409,
-          ErrorCode.SLOT_FULL,
-          "This time slot is fully booked",
-        );
-      }
 
       // Get/Create cart & clean expired
       let cart = await Cart.findOne({ userId });
@@ -115,11 +105,12 @@ export class CartService {
       const capacityResult = await SlotCapacity.updateOne(
         {
           serviceId: item.serviceId,
-          date: new Date(item.selectedDate).setHours(0, 0, 0, 0), // normalize
+          date: item.selectedDate,
           timeSlotStart: item.timeSlotStart,
-          bookedCount: { $gt: 0 }, // sanity check
+          timeSlotEnd: item.timeSlotEnd,
+          bookedCount: { $gte: item.quantity },
         },
-        { $inc: { bookedCount: -1 } },
+        { $inc: { bookedCount: -item.quantity } },
       );
 
       //   if no capacity doc found
@@ -146,6 +137,7 @@ export class CartService {
     selectedDate: string,
     timeSlotStart: string,
     timeSlotEnd: string,
+    quantity?: number,
   ): Promise<ICart> {
     try {
       const cart = await Cart.findOne({ userId });
@@ -159,41 +151,123 @@ export class CartService {
 
       const item = cart.items[itemIndex];
 
-      // Check capacity for new slot
-      const capacityDoc = await SlotCapacity.findOneAndUpdate(
-        {
-          serviceId: item.serviceId,
-          date: new Date(selectedDate),
-          timeSlotStart: timeSlotStart,
-          timeSlotEnd: timeSlotEnd,
-        },
-        { $inc: { bookedCount: 1 } },
-        { upsert: true, new: true },
-      );
-
-      if (!capacityDoc) {
+      const service = await Service.findById(item.serviceId);
+      if (!service) {
         throw new AppError(
-          409,
-          ErrorCode.SLOT_FULL,
-          "This time slot is fully booked",
+          404,
+          ErrorCode.SERVICE_NOT_FOUND,
+          "Service not found",
         );
       }
 
-      // Release old slot
-      await SlotCapacity.updateOne(
-        {
-          serviceId: item.serviceId,
-          date: item.selectedDate,
-          timeSlotStart: item.timeSlotStart,
-          timeSlotEnd: item.timeSlotEnd,
-        },
-        { $inc: { bookedCount: -1 } },
-      );
+      const nextQuantity = quantity ?? item.quantity;
+      if (!Number.isInteger(nextQuantity) || nextQuantity < 1) {
+        throw new AppError(
+          400,
+          ErrorCode.VALIDATION_ERROR,
+          "quantity must be a positive integer",
+        );
+      }
+
+      if (nextQuantity > service.capacityPerSlot) {
+        throw new AppError(
+          409,
+          ErrorCode.SLOT_FULL,
+          `Requested quantity exceeds the slot capacity for this service (${service.capacityPerSlot})`,
+        );
+      }
+
+      const currentQuantity = item.quantity;
+      const isSameSlot =
+        new Date(item.selectedDate).getTime() ===
+          new Date(selectedDate).getTime() &&
+        item.timeSlotStart === timeSlotStart &&
+        item.timeSlotEnd === timeSlotEnd;
+
+      if (isSameSlot) {
+        const quantityDelta = nextQuantity - currentQuantity;
+
+        if (quantityDelta !== 0) {
+          const capacityDoc = await SlotCapacity.findOneAndUpdate(
+            {
+              serviceId: item.serviceId,
+              date: new Date(selectedDate),
+              timeSlotStart: timeSlotStart,
+              timeSlotEnd: timeSlotEnd,
+            },
+            { $inc: { bookedCount: quantityDelta } },
+            { upsert: true, new: true },
+          );
+
+          if (!capacityDoc || capacityDoc.bookedCount > service.capacityPerSlot) {
+            if (capacityDoc) {
+              await SlotCapacity.updateOne(
+                {
+                  serviceId: item.serviceId,
+                  date: new Date(selectedDate),
+                  timeSlotStart: timeSlotStart,
+                  timeSlotEnd: timeSlotEnd,
+                },
+                { $inc: { bookedCount: -quantityDelta } },
+              );
+            }
+
+            throw new AppError(
+              409,
+              ErrorCode.SLOT_FULL,
+              "This time slot is fully booked",
+            );
+          }
+        }
+      } else {
+        const capacityDoc = await SlotCapacity.findOneAndUpdate(
+          {
+            serviceId: item.serviceId,
+            date: new Date(selectedDate),
+            timeSlotStart: timeSlotStart,
+            timeSlotEnd: timeSlotEnd,
+          },
+          { $inc: { bookedCount: nextQuantity } },
+          { upsert: true, new: true },
+        );
+
+        if (!capacityDoc || capacityDoc.bookedCount > service.capacityPerSlot) {
+          if (capacityDoc) {
+            await SlotCapacity.updateOne(
+              {
+                serviceId: item.serviceId,
+                date: new Date(selectedDate),
+                timeSlotStart: timeSlotStart,
+                timeSlotEnd: timeSlotEnd,
+              },
+              { $inc: { bookedCount: -nextQuantity } },
+            );
+          }
+
+          throw new AppError(
+            409,
+            ErrorCode.SLOT_FULL,
+            "This time slot is fully booked",
+          );
+        }
+
+        await SlotCapacity.updateOne(
+          {
+            serviceId: item.serviceId,
+            date: item.selectedDate,
+            timeSlotStart: item.timeSlotStart,
+            timeSlotEnd: item.timeSlotEnd,
+            bookedCount: { $gte: currentQuantity },
+          },
+          { $inc: { bookedCount: -currentQuantity } },
+        );
+      }
 
       // Update item details
       item.selectedDate = new Date(selectedDate);
       item.timeSlotStart = timeSlotStart;
       item.timeSlotEnd = timeSlotEnd;
+      item.quantity = nextQuantity;
       item.addedAt = new Date(); // reset expiry
 
       this.recalculateTotal(cart);
@@ -223,8 +297,9 @@ export class CartService {
             date: item.selectedDate,
             timeSlotStart: item.timeSlotStart,
             timeSlotEnd: item.timeSlotEnd,
+            bookedCount: { $gte: item.quantity },
           },
-          update: { $inc: { bookedCount: -1 } },
+          update: { $inc: { bookedCount: -item.quantity } },
         },
       }));
       await SlotCapacity.bulkWrite(bulkOps);
@@ -238,5 +313,45 @@ export class CartService {
       (sum, item) => sum + item.priceAtAdd * item.quantity,
       0,
     );
+  }
+
+  private async reserveCapacity(
+    serviceId: mongoose.Types.ObjectId,
+    selectedDate: string,
+    timeSlotStart: string,
+    timeSlotEnd: string,
+    quantity: number,
+    maxCapacity: number,
+  ): Promise<void> {
+    const capacityDoc = await SlotCapacity.findOneAndUpdate(
+      {
+        serviceId,
+        date: new Date(selectedDate),
+        timeSlotStart,
+        timeSlotEnd,
+      },
+      { $inc: { bookedCount: quantity } },
+      { upsert: true, new: true },
+    );
+
+    if (!capacityDoc || capacityDoc.bookedCount > maxCapacity) {
+      if (capacityDoc) {
+        await SlotCapacity.updateOne(
+          {
+            serviceId,
+            date: new Date(selectedDate),
+            timeSlotStart,
+            timeSlotEnd,
+          },
+          { $inc: { bookedCount: -quantity } },
+        );
+      }
+
+      throw new AppError(
+        409,
+        ErrorCode.SLOT_FULL,
+        "This time slot is fully booked",
+      );
+    }
   }
 }
