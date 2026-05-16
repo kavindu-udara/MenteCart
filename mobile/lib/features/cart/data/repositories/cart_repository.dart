@@ -1,4 +1,4 @@
-import 'package:mobile/shared/services/api_client.dart';
+import 'package:mente_cart/shared/services/api_client.dart';
 import '../models/cart_model.dart';
 
 class CartRepository {
