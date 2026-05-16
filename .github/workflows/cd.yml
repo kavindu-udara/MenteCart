@@ -34,6 +34,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          load: true
           push: false
           tags: mentecart:${{ github.sha }}
       - name: Save image as tar
