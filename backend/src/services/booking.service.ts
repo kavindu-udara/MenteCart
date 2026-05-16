@@ -1,7 +1,10 @@
+import { generatePayHereHash } from "../lib/payhere";
 import Booking, { IBooking, PaymentMethod } from "../models/booking.model";
 import Cart from "../models/cart.model";
 import Service from "../models/service.model";
 import { SlotCapacity } from "../models/slotCapacity.model";
+import User from "../models/user.model";
+import { BookingResponse } from "../types/service";
 import { AppError, ErrorCode } from "../utils/appError";
 
 export class BookingService {
@@ -9,6 +12,7 @@ export class BookingService {
     process.env.MAX_DAILY_BOOKINGS || "3",
     10,
   );
+  private CURRENCY = process.env.PAYHERE_CURRENCY || "USD";
 
   private CANCELLATION_CUTOFF_HOURS: number = parseInt(
     process.env.CANCELLATION_CUTOFF_HOURS || "2",
@@ -38,7 +42,7 @@ export class BookingService {
   async checkout(
     userId: string,
     paymentMethod: PaymentMethod,
-  ): Promise<IBooking> {
+  ): Promise<BookingResponse> {
     try {
       const cart = await Cart.findOne({ userId });
       if (!cart || cart.items.length === 0) {
@@ -135,6 +139,47 @@ export class BookingService {
         await booking.save();
       }
 
+      if (paymentMethod === "payhere") {
+        const user = await User.findById(userId);
+        if (!user) {
+          throw new AppError(404, "USER_NOT_FOUND", "User not found");
+        }
+
+        const hash = generatePayHereHash({
+          merchant_id: process.env.PAYHERE_MERCHANT_ID!,
+          order_id: booking._id.toString(),
+          amount: booking.totalAmount.toString(),
+          currency: this.CURRENCY,
+          secret: process.env.PAYHERE_MERCHANT_SECRET!,
+        });
+
+        // Return payment instructions to mobile
+        return {
+          ...booking.toObject(),
+          paymentInstructions: {
+            url: process.env.PAYHERE_SANDBOX_URL,
+            params: {
+              merchant_id: process.env.PAYHERE_MERCHANT_ID,
+              return_url: process.env.PAYHERE_RETURN_URL,
+              cancel_url: process.env.PAYHERE_CANCEL_URL,
+              notify_url: process.env.PAYHERE_NOTIFY_URL,
+              order_id: booking._id.toString(),
+              items: booking.items.map((i) => i.serviceId).join(","),
+              currency: this.CURRENCY,
+              amount: booking.totalAmount.toString(),
+              first_name: user.firstName,
+              last_name: user.lastName,
+              email: user.email,
+              phone: "0770000000",
+              address: "Colombo",
+              city: "Colombo",
+              country: "Sri Lanka",
+              hash,
+            },
+          },
+        };
+      }
+
       // clear cart
       cart.items = [];
       cart.totalAmount = 0;
@@ -147,6 +192,74 @@ export class BookingService {
         throw error;
       }
       throw new AppError(500, "CHECKOUT_FAILED", "Checkout process failed");
+    }
+  }
+
+  async processPayHereWebhook(payload: {
+    order_id: string;
+    status_code: string;
+    payhere_amount: string;
+  }) {
+    const booking = await Booking.findById(payload.order_id);
+    if (!booking) {
+      throw new AppError(
+        404,
+        "BOOKING_NOT_FOUND",
+        "Booking not found for PayHere webhook",
+      );
+    }
+
+    if (booking.status !== "pending") {
+      console.log(
+        `[PayHere] Ignored duplicate webhook for booking ${booking._id}`,
+      );
+      return booking;
+    }
+
+    const isSuccess = payload.status_code === "2"; // PayHere success code
+
+    if (isSuccess) {
+      // ✅ Payment succeeded → confirm booking
+      booking.status = "confirmed";
+      booking.paymentStatus = "paid";
+      booking.statusHistory.push({
+        status: "confirmed",
+        timestamp: new Date(),
+        reason: "PayHere payment success",
+      });
+    } else {
+      // ❌ Payment failed → release capacity
+      booking.status = "failed";
+      booking.paymentStatus = "failed";
+      booking.statusHistory.push({
+        status: "failed",
+        timestamp: new Date(),
+        reason: `PayHere status_code: ${payload.status_code}`,
+      });
+
+      // 📉 Release held capacity back to pool
+      await this.releaseBookingCapacity(booking);
+    }
+
+    await booking.save();
+    return booking;
+  }
+
+  private async releaseBookingCapacity(booking: any): Promise<void> {
+    const bulkOps = booking.items.map((item: any) => ({
+      updateOne: {
+        filter: {
+          serviceId: item.serviceId,
+          date: item.selectedDate,
+          timeSlotStart: item.timeSlotStart,
+          bookedCount: { $gt: 0 }, // Safety guard
+        },
+        update: { $inc: { bookedCount: -1 } },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await SlotCapacity.bulkWrite(bulkOps);
     }
   }
 
@@ -223,6 +336,8 @@ export class BookingService {
         reason: "Cancelled by user",
       });
       await booking.save();
+
+      return booking;
     } catch (error) {
       console.error("Cancel booking error:", error);
       if (error instanceof AppError) {
