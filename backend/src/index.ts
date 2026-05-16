@@ -1,6 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import pino from 'pino-http';
 
 import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
@@ -19,6 +20,9 @@ dotenv.config();
 await DB.connect();
 
 const app = express();
+
+// pino logger
+app.use(pino());
 
 app.use(webhookRoutes); // must be BEFORE express.json() to handle raw body for PayHere webhooks
 
