@@ -1,0 +1,14 @@
+node_modules
+.pnp
+.pnp.js
+dist
+build
+.env
+.DS_Store
+npm-debug.log
+pnpm-debug.log
+.idea
+.vscode
+docker-compose.override.yml
+Dockerfile
+*.log
