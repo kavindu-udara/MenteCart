@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mobile/shared/services/api_client.dart';
+import 'package:mente_cart/shared/services/api_client.dart';
 
 import '../../../bookings/presentation/bloc/bookings_bloc.dart';
 import '../../../bookings/data/repositories/bookings_repository.dart';

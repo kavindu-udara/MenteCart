@@ -1,4 +1,4 @@
-import 'package:mobile/shared/services/api_client.dart';
+import 'package:mente_cart/shared/services/api_client.dart';
 import '../models/cart_model.dart';
 
 class CartRepository {
@@ -44,9 +44,24 @@ class CartRepository {
     }
   }
 
-  Future<void> updateItemQuantity(String itemId, int quantity) async {
+  Future<void> updateItemQuantity(
+    String itemId, {
+    required String serviceId,
+    required String selectedDate,
+    required String timeSlotStart,
+    required String timeSlotEnd,
+    required int quantity,
+  }) async {
+    final payload = {
+      'serviceId': serviceId,
+      'selectedDate': selectedDate,
+      'timeSlotStart': timeSlotStart,
+      'timeSlotEnd': timeSlotEnd,
+      'quantity': quantity.toString(),
+    };
+
     try {
-      await _apiClient.patch('cart/items/$itemId', data: {'quantity': quantity});
+      await _apiClient.patch('cart/items/$itemId', data: payload);
     } catch (e) {
       rethrow;
     }
@@ -58,14 +73,18 @@ class CartRepository {
     required String selectedDate,
     required String timeSlotStart,
     required String timeSlotEnd,
+    required int quantity,
   }) async {
+    final payload = {
+      'serviceId': serviceId,
+      'selectedDate': selectedDate,
+      'timeSlotStart': timeSlotStart,
+      'timeSlotEnd': timeSlotEnd,
+      'quantity': quantity.toString(),
+    };
+
     try {
-      await _apiClient.patch('cart/items/$itemId', data: {
-        'serviceId': serviceId,
-        'selectedDate': selectedDate,
-        'timeSlotStart': timeSlotStart,
-        'timeSlotEnd': timeSlotEnd,
-      });
+      await _apiClient.patch('cart/items/$itemId', data: payload);
     } catch (e) {
       rethrow;
     }
