@@ -41,4 +41,14 @@ class AuthRepository {
       rethrow;
     }
   }
+
+  /// Get current authenticated user profile
+  Future<Map<String, dynamic>> me() async {
+    try {
+      final result = await remoteDataSource.me();
+      return result;
+    } on AppException {
+      rethrow;
+    }
+  }
 }

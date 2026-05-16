@@ -47,4 +47,14 @@ class AuthRemoteDataSource {
       rethrow;
     }
   }
+
+  /// Me - GET /auth/me
+  Future<Map<String, dynamic>> me() async {
+    try {
+      final response = await apiClient.get('auth/me');
+      return response;
+    } on AppException {
+      rethrow;
+    }
+  }
 }

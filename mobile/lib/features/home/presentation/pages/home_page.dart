@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mente_cart/shared/services/api_client.dart';
 
+import '../../../auth/data/data_sources/auth_remote_data_source.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
+import '../../../auth/presentation/pages/profile_page.dart';
 import '../../../bookings/presentation/bloc/bookings_bloc.dart';
 import '../../../bookings/data/repositories/bookings_repository.dart';
 import '../../../bookings/presentation/pages/bookings_page.dart';
@@ -20,6 +23,9 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = ApiClient();
+    final authRepository = AuthRepository(
+      remoteDataSource: AuthRemoteDataSource(apiClient: apiClient),
+    );
     
     return MultiBlocProvider(
       providers: [
@@ -89,10 +95,11 @@ class HomePage extends StatelessWidget {
             ),
             body: IndexedStack(
               index: currentIndex,
-              children: const [
-                HomeOverviewPage(),
-                CartPage(),
-                BookingsPage(),
+              children: [
+                const HomeOverviewPage(),
+                const CartPage(),
+                const BookingsPage(),
+                ProfilePage(authRepository: authRepository),
               ],
             ),
             bottomNavigationBar: NavigationBar(
@@ -116,6 +123,11 @@ class HomePage extends StatelessWidget {
                   selectedIcon: Icon(Icons.book),
                   label: 'Bookings',
                 ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
               ],
             ),
           );
@@ -129,6 +141,7 @@ class HomePage extends StatelessWidget {
     return switch (index) {
       1 => 'Cart',
       2 => 'Bookings',
+      3 => 'Profile',
       _ => 'Home',
     };
   }
