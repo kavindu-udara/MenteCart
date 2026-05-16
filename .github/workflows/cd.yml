@@ -27,8 +27,8 @@ jobs:
       - name: Build image (no push)
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./backend
+          file: ./backend/Dockerfile
           push: false
           tags: mentecart:${{ github.sha }}
       - name: Save image as tar
