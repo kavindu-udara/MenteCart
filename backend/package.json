@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec tsx src/index.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "seed": "tsx src/lib/seeder.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -21,8 +21,10 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.97",
     "@types/redis": "^4.0.11",
+    "jest": "^30.4.2",
     "md5": "^2.3.0",
     "nodemon": "^3.1.14",
+    "supertest": "^7.2.2",
     "tsx": "^4.21.0"
   },
   "dependencies": {

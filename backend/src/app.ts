@@ -1,6 +1,5 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import pino from 'pino-http';
 
 import authRoutes from './routes/auth.route';
@@ -13,8 +12,6 @@ import { errorMiddleware } from './middlewares/error.middleware';
 import { RedisService } from './services/redis.service';
 import { DB } from './lib/db';
 import { cartJob } from './lib/cron';
-
-dotenv.config();
 
 // connect to database
 await DB.connect();
@@ -36,9 +33,6 @@ await RedisService.create();
 // start cart cron job
 cartJob.start();
 
-const HOST = process.env.HOST || 'localhost';
-const PORT = process.env.PORT ?  parseInt(process.env.PORT) : 3000;
-
 app.get('/test', (req, res) => {
     res.send('Hello, MenteCart!');
 });
@@ -59,6 +53,4 @@ app.use((req, res) => {
 
 app.use(errorMiddleware);
 
-app.listen(PORT, HOST, () => {
-    console.log(`Server is running on port ${HOST}:${PORT}`);
-});
+export default app;
