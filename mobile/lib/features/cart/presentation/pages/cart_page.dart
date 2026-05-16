@@ -19,6 +19,7 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> with RouteAware {
+  bool _isCheckingOut = false;
   Future<void> _refresh() async {
     context.read<CartBloc>().add(const CartRequested());
     // small delay to allow network request to update UI
@@ -129,6 +130,7 @@ class _CartPageState extends State<CartPage> with RouteAware {
     final api = ApiClient();
     final cartBloc = context.read<CartBloc>();
 
+    setState(() => _isCheckingOut = true);
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -142,6 +144,7 @@ class _CartPageState extends State<CartPage> with RouteAware {
       if (Navigator.of(context, rootNavigator: true).canPop()) {
         Navigator.of(context, rootNavigator: true).pop();
       }
+      setState(() => _isCheckingOut = false);
 
       final booking = res['booking'] as Map<String, dynamic>?;
 
@@ -174,8 +177,14 @@ class _CartPageState extends State<CartPage> with RouteAware {
       if (Navigator.of(context, rootNavigator: true).canPop()) {
         Navigator.of(context, rootNavigator: true).pop();
       }
-      final err = e is AppException ? e.message : e.toString();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      setState(() => _isCheckingOut = false);
+      if (e is AppException) {
+        final formatted = '${e.message}${e.errorCode != null ? ' (${e.errorCode})' : ''}';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(formatted)));
+      } else {
+        final err = e.toString();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      }
     }
   }
 
@@ -247,16 +256,20 @@ class _CartPageState extends State<CartPage> with RouteAware {
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        // Show checkout options only when there are items
-                        await _showCheckoutOptions(context, cart.totalAmount);
-                      },
+                        onPressed: _isCheckingOut
+                            ? null
+                            : () async {
+                                // Show checkout options only when there are items
+                                await _showCheckoutOptions(context, cart.totalAmount);
+                              },
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text('Book Now'),
+                        child: _isCheckingOut
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Text('Book Now'),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -382,7 +395,7 @@ class _CartItemCardState extends State<_CartItemCard> {
             Row(
               children: [
                 TextButton.icon(
-                  onPressed: () async {
+                    onPressed: () async {
                     final selectedDate = widget.item.selectedDate;
                     final dateStr = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
 
@@ -465,7 +478,9 @@ class _CartItemCardState extends State<_CartItemCard> {
                         selectedDate: dateStr,
                         timeSlotStart: selectedStart!,
                         timeSlotEnd: selectedEnd!,
+                        quantity: quantity,
                       );
+                      setState(() => quantity = quantity);
                       context.read<CartBloc>().add(const CartRequested());
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Slot updated')));
                     } catch (e) {
@@ -515,11 +530,21 @@ class _CartItemCardState extends State<_CartItemCard> {
                     onPressed: quantity > 1
                         ? () async {
                             final newQty = quantity - 1;
+                            final selectedDate = widget.item.selectedDate;
+                            final dateStr = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
                             try {
                               if (newQty <= 0) {
                                 await _cartRepo.removeItem(widget.item.id);
                               } else {
-                                await _cartRepo.updateItemQuantity(widget.item.id, newQty);
+                                await _cartRepo.updateItemQuantity(
+                                  widget.item.id,
+                                  serviceId: widget.item.serviceId,
+                                  selectedDate: dateStr,
+                                  timeSlotStart: widget.item.timeSlotStart,
+                                  timeSlotEnd: widget.item.timeSlotEnd,
+                                  quantity: newQty,
+                                );
+                                setState(() => quantity = newQty);
                               }
                               // refresh cart
                               context.read<CartBloc>().add(const CartRequested());
@@ -544,12 +569,23 @@ class _CartItemCardState extends State<_CartItemCard> {
                       }
 
                       final newQty = quantity + 1;
+                      final selectedDate = widget.item.selectedDate;
+                      final dateStr = '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
                       try {
-                        // Try updating quantity on server
-                        await _cartRepo.updateItemQuantity(widget.item.id, newQty);
+                        // Try updating quantity on server with full payload
+                        await _cartRepo.updateItemQuantity(
+                          widget.item.id,
+                          serviceId: widget.item.serviceId,
+                          selectedDate: dateStr,
+                          timeSlotStart: widget.item.timeSlotStart,
+                          timeSlotEnd: widget.item.timeSlotEnd,
+                          quantity: newQty,
+                        );
+                        setState(() => quantity = newQty);
                         context.read<CartBloc>().add(const CartRequested());
                       } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                        final errorMsg = e is AppException ? e.message : e.toString();
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
                       }
                     },
                     icon: const Icon(Icons.add),

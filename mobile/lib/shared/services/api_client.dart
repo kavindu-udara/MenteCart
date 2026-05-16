@@ -21,9 +21,6 @@ class ApiClient {
       ),
     );
 
-    // Add error interceptor
-    _dio.interceptors.add(_ErrorInterceptor());
-    
     // Add a shared CookieManager so the HTTP-only JWT cookie is reused across
     // all ApiClient instances created in different screens/features.
     _dio.interceptors.add(CookieManager(_cookieJar));
@@ -36,10 +33,9 @@ class ApiClient {
   }) async {
     try {
       final response = await _dio.post(endpoint, data: data);
-      return response.data is Map ? response.data : {};
+      return _unwrapResponse(response);
     } on DioException catch (e) {
       _handleDioError(e);
-      rethrow;
     }
   }
 
@@ -47,10 +43,9 @@ class ApiClient {
   Future<Map<String, dynamic>> get(String endpoint) async {
     try {
       final response = await _dio.get(endpoint);
-      return response.data is Map ? response.data : {};
+      return _unwrapResponse(response);
     } on DioException catch (e) {
       _handleDioError(e);
-      rethrow;
     }
   }
 
@@ -58,10 +53,9 @@ class ApiClient {
   Future<Map<String, dynamic>> delete(String endpoint) async {
     try {
       final response = await _dio.delete(endpoint);
-      return response.data is Map ? response.data : {};
+      return _unwrapResponse(response);
     } on DioException catch (e) {
       _handleDioError(e);
-      rethrow;
     }
   }
 
@@ -69,20 +63,51 @@ class ApiClient {
   Future<Map<String, dynamic>> patch(String endpoint, {Map<String, dynamic>? data}) async {
     try {
       final response = await _dio.patch(endpoint, data: data);
-      return response.data is Map ? response.data : {};
+      return _unwrapResponse(response);
     } on DioException catch (e) {
       _handleDioError(e);
-      rethrow;
     }
   }
 
+  Map<String, dynamic> _unwrapResponse(Response response) {
+    final responseData = response.data;
+
+    if (response.statusCode != null && response.statusCode! >= 400) {
+      if (responseData is Map) {
+        throw AppException(
+          statusCode: response.statusCode!,
+          message: responseData['message']?.toString() ?? 'Request failed',
+          errorCode: responseData['errorCode']?.toString(),
+        );
+      }
+
+      throw AppException(
+        statusCode: response.statusCode!,
+        message: 'Request failed',
+      );
+    }
+
+    return responseData is Map<String, dynamic>
+        ? responseData
+        : responseData is Map
+            ? responseData.map((key, value) => MapEntry(key.toString(), value))
+            : <String, dynamic>{};
+  }
+
   /// Handle Dio errors and convert to AppException
-  void _handleDioError(DioException error) {
+  Never _handleDioError(DioException error) {
     int statusCode = error.response?.statusCode ?? 500;
     String message = 'An error occurred';
     String? errorCode;
 
-    if (error.type == DioExceptionType.connectionTimeout ||
+    if (error.response != null) {
+      final responseData = error.response!.data;
+      if (responseData is Map) {
+        message = responseData['message']?.toString() ?? 'Request failed';
+        errorCode = responseData['errorCode']?.toString();
+        statusCode = error.response!.statusCode ?? statusCode;
+      }
+    } else if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout) {
       statusCode = 408;
@@ -91,12 +116,6 @@ class ApiClient {
     } else if (error.type == DioExceptionType.unknown) {
       message = 'Network error. Please check your connection.';
       errorCode = 'NETWORK_ERROR';
-    } else if (error.response != null) {
-      final responseData = error.response!.data;
-      if (responseData is Map) {
-        message = responseData['message'] ?? 'Request failed';
-        errorCode = responseData['errorCode'];
-      }
     }
 
     throw AppException(
@@ -104,35 +123,6 @@ class ApiClient {
       message: message,
       errorCode: errorCode,
     );
-  }
-}
-
-/// Error interceptor for Dio
-class _ErrorInterceptor extends Interceptor {
-  @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
-    // Check if response contains error
-    if (response.statusCode != null && response.statusCode! >= 400) {
-      final data = response.data;
-      if (data is Map) {
-        throw AppException(
-          statusCode: response.statusCode!,
-          message: data['message'] ?? 'Request failed',
-          errorCode: data['errorCode'],
-        );
-      } else {
-        throw AppException(
-          statusCode: response.statusCode!,
-          message: 'Request failed',
-        );
-      }
-    }
-    handler.next(response);
-  }
-
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    handler.next(err);
   }
 }
 
