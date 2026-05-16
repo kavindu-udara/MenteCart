@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.route';
 import servicesRoutes from './routes/services.route';
 import cartRoutes from './routes/cart.route';
 import bookingRoutes from './routes/booking.route';
+import webhookRoutes from './routes/webhook.routes';
 
 import { errorMiddleware } from './middlewares/error.middleware';
 import { RedisService } from './services/redis.service';
@@ -18,6 +19,9 @@ dotenv.config();
 await DB.connect();
 
 const app = express();
+
+app.use(webhookRoutes); // must be BEFORE express.json() to handle raw body for PayHere webhooks
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

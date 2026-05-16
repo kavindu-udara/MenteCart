@@ -1,20 +1,55 @@
 import crypto from "crypto";
 
-export const generatePayHereHash = (params: {
+const md5Upper = (str: string): string =>
+  crypto.createHash("md5").update(str).digest("hex").toUpperCase();
+
+export function formatPayHereAmount(amount: number): string {
+  return parseFloat(amount.toString())
+    .toLocaleString("en-us", { minimumFractionDigits: 2 })
+    .replaceAll(",", "");
+}
+
+// Generate hash
+export function generatePayHereHash(params: {
   merchant_id: string;
   order_id: string;
-  amount: string;
-  currency: string;
+  amount: number; 
+  currency: "LKR" | "USD";
   secret: string;
-}) => {
-  const md5 = (str: string) =>
-    crypto.createHash("md5").update(str).digest("hex").toUpperCase();
+}): string {
+  const hashedSecret = md5Upper(params.secret);
+  const amountFormatted = formatPayHereAmount(params.amount);
+
   const hashString =
     params.merchant_id +
     params.order_id +
-    params.amount +
+    amountFormatted +
     params.currency +
-    md5(params.secret);
+    hashedSecret;
 
-  return md5(hashString);
-};
+  return md5Upper(hashString);
+}
+
+// Verify webhook signature
+export function verifyPayHereSignature(
+  payload: {
+    merchant_id: string;
+    order_id: string;
+    payhere_amount: string;
+    payhere_currency: string;
+    md5sig: string;
+  },
+  secret: string,
+): boolean {
+  const hashedSecret = md5Upper(secret);
+
+  const hashString =
+    payload.merchant_id +
+    payload.order_id +
+    payload.payhere_amount + 
+    payload.payhere_currency +
+    hashedSecret;
+
+  const expected = md5Upper(hashString);
+  return payload.md5sig === expected;
+}

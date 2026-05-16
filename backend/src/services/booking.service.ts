@@ -1,4 +1,4 @@
-import { generatePayHereHash } from "../lib/payhere";
+import { formatPayHereAmount, generatePayHereHash } from "../lib/payhere";
 import Booking, { IBooking, PaymentMethod } from "../models/booking.model";
 import Cart from "../models/cart.model";
 import Service from "../models/service.model";
@@ -145,11 +145,13 @@ export class BookingService {
           throw new AppError(404, "USER_NOT_FOUND", "User not found");
         }
 
+        const amount = booking.totalAmount;
+
         const hash = generatePayHereHash({
           merchant_id: process.env.PAYHERE_MERCHANT_ID!,
           order_id: booking._id.toString(),
-          amount: booking.totalAmount.toString(),
-          currency: this.CURRENCY,
+          amount,
+          currency: "USD",
           secret: process.env.PAYHERE_MERCHANT_SECRET!,
         });
 
@@ -166,7 +168,7 @@ export class BookingService {
               order_id: booking._id.toString(),
               items: booking.items.map((i) => i.serviceId).join(","),
               currency: this.CURRENCY,
-              amount: booking.totalAmount.toString(),
+              amount: formatPayHereAmount(amount),
               first_name: user.firstName,
               last_name: user.lastName,
               email: user.email,
