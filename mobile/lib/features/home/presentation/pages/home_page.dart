@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile/shared/services/api_client.dart';
 
 import '../../../bookings/presentation/bloc/bookings_bloc.dart';
+import '../../../bookings/data/repositories/bookings_repository.dart';
 import '../../../bookings/presentation/pages/bookings_page.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../cart/presentation/pages/cart_page.dart';
@@ -34,7 +35,9 @@ class HomePage extends StatelessWidget {
           )..add(const CartRequested()),
         ),
         BlocProvider(
-          create: (_) => BookingsBloc()..add(const BookingsRequested()),
+          create: (_) => BookingsBloc(
+            repository: BookingsRepository(apiClient: apiClient),
+          )..add(const BookingsRequested()),
         ),
         BlocProvider(
           create: (_) => ServicesBloc(

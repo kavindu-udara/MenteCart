@@ -7,3 +7,9 @@ sealed class BookingsEvent {
 final class BookingsRequested extends BookingsEvent {
   const BookingsRequested();
 }
+
+final class BookingCancelRequested extends BookingsEvent {
+  final String bookingId;
+
+  const BookingCancelRequested({required this.bookingId});
+}

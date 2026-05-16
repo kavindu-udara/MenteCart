@@ -1,6 +1,6 @@
 part of 'bookings_bloc.dart';
 
-enum BookingStatus { pending, confirmed, completed, cancelled }
+enum BookingStatus { pending, confirmed, completed, cancelled, failed }
 
 sealed class BookingsState {
   const BookingsState();
@@ -41,17 +41,29 @@ final class BookingsError extends BookingsState {
 }
 
 final class BookingSummary {
+  final String id;
   final String reference;
   final String title;
   final String dateLabel;
   final String timeLabel;
   final BookingStatus status;
+  final String paymentMethodLabel;
+  final String paymentStatusLabel;
+  final double totalAmount;
+  final int itemCount;
 
   const BookingSummary({
+    required this.id,
     required this.reference,
     required this.title,
     required this.dateLabel,
     required this.timeLabel,
     required this.status,
+    required this.paymentMethodLabel,
+    required this.paymentStatusLabel,
+    required this.totalAmount,
+    required this.itemCount,
   });
+
+  bool get canCancel => status == BookingStatus.pending || status == BookingStatus.confirmed;
 }

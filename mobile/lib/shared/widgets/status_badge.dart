@@ -30,6 +30,11 @@ class StatusBadge extends StatelessWidget {
           color: Colors.red,
           icon: Icons.cancel,
         ),
+      BookingStatus.failed => _BadgeData(
+          label: 'Failed',
+          color: Colors.deepOrange,
+          icon: Icons.error,
+        ),
     };
 
     return DecoratedBox(

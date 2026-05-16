@@ -9,11 +9,13 @@ class PayHereWebViewPage extends StatefulWidget {
   final String paymentUrl;
   final Map<String, String> params;
   final String bookingId;
+  final VoidCallback onBookingSettled;
 
   const PayHereWebViewPage({
     required this.paymentUrl,
     required this.params,
     required this.bookingId,
+    required this.onBookingSettled,
     super.key,
   });
 
@@ -96,6 +98,7 @@ class _PayHereWebViewPageState extends State<PayHereWebViewPage> {
 
         if (status != null && status != 'pending') {
           timer.cancel();
+          widget.onBookingSettled();
           Navigator.of(context).popUntil((route) => route.isFirst);
 
           if (status == 'confirmed') {

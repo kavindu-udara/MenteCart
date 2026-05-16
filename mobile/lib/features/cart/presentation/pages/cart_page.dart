@@ -127,6 +127,7 @@ class _CartPageState extends State<CartPage> with RouteAware {
 
   Future<void> _checkout(String method) async {
     final api = ApiClient();
+    final cartBloc = context.read<CartBloc>();
 
     showDialog<void>(
       context: context,
@@ -138,7 +139,9 @@ class _CartPageState extends State<CartPage> with RouteAware {
       final res = await api.post('bookings/checkout', data: {'paymentMethod': method});
 
       // close loading
-      Navigator.of(context).pop();
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
 
       final booking = res['booking'] as Map<String, dynamic>?;
 
@@ -152,19 +155,25 @@ class _CartPageState extends State<CartPage> with RouteAware {
           Navigator.of(context).push(MaterialPageRoute(
             builder: (_) =>
                 // ignore: prefer_const_constructors
-                PayHereWebViewPage(paymentUrl: url, params: params, bookingId: bookingId),
+                PayHereWebViewPage(
+                  paymentUrl: url,
+                  params: params,
+                  bookingId: bookingId,
+                  onBookingSettled: () => cartBloc.add(const CartRequested()),
+                ),
           ));
         }
         return;
       }
 
       // For cash or pay_on_arrival, show message and refresh cart
+      cartBloc.add(const CartRequested());
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Checkout successful')));
-      // Refresh cart and navigate to home
-      context.read<CartBloc>().add(const CartRequested());
-      Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
-      Navigator.of(context).pop();
+      if (Navigator.of(context, rootNavigator: true).canPop()) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       final err = e is AppException ? e.message : e.toString();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
     }

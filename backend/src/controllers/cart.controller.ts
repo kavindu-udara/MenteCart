@@ -152,4 +152,15 @@ export class CartController {
     }
   }
 
+  async clearCache(userId : string) {
+    try {
+      const cacheKey = `cart:${userId}`;
+      await RedisService.del(cacheKey);
+      console.log(`Cleared cart cache for user ${userId}`);
+    } catch (error) {
+      console.error("Clear cart cache error:", error);
+      throw error;
+    }
+  }
+
 }
